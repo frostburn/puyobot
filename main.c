@@ -8,7 +8,10 @@
 #define H_SHIFT (1)
 #define V_SHIFT (6)
 #define FULL (0xfffffffffffffffULL)
+#define TOP (0x3fULL)
 #define BOTTOM (0xfc0000000000000ULL)
+#define LEFT_WALL (0x41041041041041ULL)
+#define RIGHT_BLOCK (0xfbefbefbefbefbeULL)
 
 #define NUM_FLOORS (2)
 #define TOTAL_HEIGHT (20)
@@ -19,6 +22,7 @@
 #define BLUE (3)
 #define PURPLE (4)
 #define GARBAGE (5)
+#define CLEAR_THRESHOLD (4)
 
 
 typedef unsigned long int puyos_t;
@@ -34,7 +38,7 @@ int popcount(puyos_t puyos) {
 }
 
 puyos_t lrand() {
-    return rand() | (((puyos_t) rand()) << 30) | (((puyos_t) rand()) << 60);
+    return rand() | (((puyos_t) rand()) << 31) | (((puyos_t) rand()) << 62);
 }
 
 void print_puyos(puyos_t puyos) {
@@ -84,8 +88,12 @@ void print_state(state *s) {
             int any = 0;
             for (int k = 0; k < NUM_COLORS; ++k) {
                 if (p & s->floors[j][k]) {
-                    printf("\x1b[3%dm", k + 1);
-                    printf(" ●");
+                    printf("\x1b[3%d;1m", k + 1);
+                    if (k == GARBAGE) {
+                        printf(" ◎");
+                    } else {
+                        printf(" ●");
+                    }
                     any  = 1;
                     break;
                 }
@@ -100,6 +108,82 @@ void print_state(state *s) {
         }
     }
     printf("chain=%d\n", s->chain);
+}
+
+puyos_t cross(puyos_t puyos) {
+    return (
+        puyos |
+        ((puyos & RIGHT_BLOCK) >> H_SHIFT) |
+        ((puyos << H_SHIFT) & RIGHT_BLOCK) |
+        (puyos << V_SHIFT) |
+        (puyos >> V_SHIFT)
+    );
+}
+
+puyos_t flood(register puyos_t source, register puyos_t target) {
+    source &= target;
+    if (!source){
+        return source;
+    }
+    register puyos_t temp;
+    do {
+        temp = source;
+        source |= (
+            ((source & RIGHT_BLOCK) >> H_SHIFT) |
+            ((source << H_SHIFT) & RIGHT_BLOCK) |
+            (source << V_SHIFT) |
+            (source >> V_SHIFT)
+        ) & target;
+    } while (temp != source);
+    return source;
+}
+
+void clear_groups(state *s) {
+    assert(NUM_FLOORS == 2);
+    assert(WIDTH % 2 == 0);
+    for (int i = 0; i < NUM_COLORS - 1; ++i) {
+        puyos_t top = s->floors[0][i];
+        puyos_t bottom = s->floors[1][i];
+
+        for (int j = 0; j < HEIGTH * WIDTH; j += 2) {
+            puyos_t top_group = 3ULL << j;
+            puyos_t bottom_group = 0;
+            puyos_t top_extra = 0;
+
+            top_group = flood(top_group, top);
+            top ^= top_group;
+            if (top_group & BOTTOM) {
+                bottom_group = top_group >> (V_SHIFT * (HEIGTH - 1));
+                bottom_group = flood(bottom_group, bottom);
+                bottom ^= bottom_group;
+                if (bottom_group & TOP) {
+                    top_extra = bottom_group << (V_SHIFT * (HEIGTH - 1));
+                    top_extra = flood(top_group, top);
+                    top ^= top_extra;
+                    top_group |= top_extra;
+                    // XXX: It's not correct to stop here, but we don't care.
+                    // Groups that snake around top and bottom are rare under normal play.
+                }
+            }
+            if (popcount(top_group) + popcount(bottom_group) >= CLEAR_THRESHOLD) {
+                s->floors[0][i] ^= top_group;
+                s->floors[1][i] ^= bottom_group;
+
+                s->floors[0][GARBAGE] &= ~(cross(top_group) | ((bottom_group & TOP) << (V_SHIFT * (HEIGTH - 1))));
+                s->floors[1][GARBAGE] &= ~(cross(bottom_group) | ((top_group & BOTTOM) >> (V_SHIFT * (HEIGTH - 1))));
+            }
+
+            bottom_group = 3ULL << j;
+            bottom_group = flood(bottom_group, bottom);
+            bottom ^= bottom_group;
+            if (popcount(bottom_group) >= CLEAR_THRESHOLD) {
+                s->floors[1][i] ^= bottom_group;
+
+                s->floors[0][GARBAGE] &= ~((bottom_group & TOP) << (V_SHIFT * (HEIGTH - 1)));
+                s->floors[1][GARBAGE] &= ~cross(bottom_group);
+            }
+        }
+    }
 }
 
 // Reference for bit parallel gravity
@@ -187,8 +271,44 @@ void test_gravity() {
     assert(puyo_count == new_puyo_count);
 }
 
+void test_clear() {
+    int test_color;
+    puyos_t test_group;
+    state *s = calloc(1, sizeof(state));
+    srand(time(NULL));
+    for (int i = 0; i < WIDTH * HEIGTH; ++i) {
+        for (int j = 0; j < NUM_FLOORS; ++j) {
+            int color = rand() % NUM_COLORS;
+            s->floors[j][color] |= 1ULL << i;
+        }
+    }
+    for (test_color = 0; test_color < NUM_COLORS - 1; ++test_color) {
+        for (int i = 0; i < WIDTH * HEIGTH; ++i) {
+            test_group = flood(1ULL << i, s->floors[0][test_color]);
+            if (popcount(test_group) >= CLEAR_THRESHOLD) {
+                break;
+            }
+            else {
+                test_group = 0;
+            }
+        }
+        if (popcount(test_group) >= CLEAR_THRESHOLD) {
+            break;
+        }
+    }
+    print_state(s);
+    print_puyos(test_group);
+    clear_groups(s);
+    print_state(s);
+    if (test_group) {
+        assert(!(s->floors[0][test_color] & test_group));
+        assert(!(s->floors[0][GARBAGE] & cross(test_group)));
+    }
+}
+
 int main() {
     test_lrand();
     test_gravity();
+    test_clear();
     return 0;
 }
