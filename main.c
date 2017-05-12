@@ -138,9 +138,10 @@ puyos_t flood(register puyos_t source, register puyos_t target) {
     return source;
 }
 
-void clear_groups(state *s) {
+int clear_groups(state *s) {
     assert(NUM_FLOORS == 2);
     assert(WIDTH % 2 == 0);
+    int num_cleared = 0;
     for (int i = 0; i < NUM_COLORS - 1; ++i) {
         puyos_t top = s->floors[0][i];
         puyos_t bottom = s->floors[1][i];
@@ -165,9 +166,11 @@ void clear_groups(state *s) {
                     // Groups that snake around top and bottom are rare under normal play.
                 }
             }
-            if (popcount(top_group) + popcount(bottom_group) >= CLEAR_THRESHOLD) {
+            int group_size = popcount(top_group) + popcount(bottom_group);
+            if (group_size >= CLEAR_THRESHOLD) {
                 s->floors[0][i] ^= top_group;
                 s->floors[1][i] ^= bottom_group;
+                num_cleared += group_size;
 
                 s->floors[0][GARBAGE] &= ~(cross(top_group) | ((bottom_group & TOP) << (V_SHIFT * (HEIGTH - 1))));
                 s->floors[1][GARBAGE] &= ~(cross(bottom_group) | ((top_group & BOTTOM) >> (V_SHIFT * (HEIGTH - 1))));
@@ -176,14 +179,17 @@ void clear_groups(state *s) {
             bottom_group = 3ULL << j;
             bottom_group = flood(bottom_group, bottom);
             bottom ^= bottom_group;
-            if (popcount(bottom_group) >= CLEAR_THRESHOLD) {
+            group_size = popcount(bottom_group);
+            if (group_size >= CLEAR_THRESHOLD) {
                 s->floors[1][i] ^= bottom_group;
+                num_cleared += group_size;
 
                 s->floors[0][GARBAGE] &= ~((bottom_group & TOP) << (V_SHIFT * (HEIGTH - 1)));
                 s->floors[1][GARBAGE] &= ~cross(bottom_group);
             }
         }
     }
+    return num_cleared;
 }
 
 // Reference for bit parallel gravity
@@ -234,6 +240,15 @@ void handle_gravity(state *s) {
             }
         }
     }
+}
+
+int resolve(state *s) {
+    int chain = -1;
+    do {
+        ++chain;
+        handle_gravity(s);
+    } while(clear_groups(s));
+    return chain;
 }
 
 void test_lrand() {
@@ -307,8 +322,24 @@ void test_clear() {
 }
 
 int main() {
-    test_lrand();
-    test_gravity();
-    test_clear();
+    // test_lrand();
+    // test_gravity();
+    // test_clear();
+
+    state *s = calloc(1, sizeof(state));
+    srand(time(NULL));
+
+    unsigned long total_chain = 0;
+    for (unsigned long k = 0; k < 1000000; ++k) {
+        for (int i = 0; i < WIDTH * HEIGTH; ++i) {
+            for (int j = 0; j < NUM_FLOORS; ++j) {
+                int color = rand() % NUM_COLORS;
+                s->floors[j][color] |= 1ULL << i;
+            }
+        }
+        total_chain += resolve(s);
+    }
+    printf("%lu\n", total_chain);
+
     return 0;
 }
