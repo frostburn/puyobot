@@ -192,19 +192,15 @@ int clear_groups(state *s) {
     return num_cleared;
 }
 
-// Reference for bit parallel gravity
+// Reference for bit parallel "raindrop" gravity
 puyos_t drop_once(puyos_t puyos) {
-    puyos_t line = BOTTOM;
-    for (int i = 0; i < HEIGHT - 1; ++i) {
-        puyos_t bellow = puyos & line;
-        puyos_t falling = ((puyos << V_SHIFT) & ~bellow) & line;
-        puyos = ((puyos & bellow) | falling) | (puyos & ~(falling >> V_SHIFT)) | (puyos & ~(line | (line >> V_SHIFT)));
-        line >>= V_SHIFT;
-    }
-    return puyos;
+    puyos_t bellow = (puyos >> V_SHIFT) | BOTTOM;
+    puyos_t falling = puyos & ~bellow;
+    return (falling << V_SHIFT) | (puyos & ~falling);
 }
 
 void handle_gravity(state *s) {
+    assert(NUM_FLOORS == 2);
     puyos_t all[2];
     for (int i = 0; i < NUM_FLOORS; ++i) {
         all[i] = 0;
@@ -213,6 +209,41 @@ void handle_gravity(state *s) {
         }
     }
 
+    puyos_t temp[2];
+    do {
+        temp[0] = all[0];
+        temp[1] = all[1];
+        puyos_t bellow, falling;
+        bellow = (all[1] >> V_SHIFT) | BOTTOM;
+        all[1] = 0;
+        for (int i = 0; i < NUM_COLORS; ++i) {
+            falling = s->floors[1][i] & ~bellow;
+            s->floors[1][i] = (falling << V_SHIFT) | (s->floors[1][i] & ~falling);
+            all[1] |= s->floors[1][i];
+        }
+
+        bellow = (all[0] >> V_SHIFT) | ((all[1] & TOP) << (V_SHIFT * (HEIGHT - 1)));
+        all[0] = 0;
+        for (int i = 0; i < NUM_COLORS; ++i) {
+            falling = s->floors[0][i] & ~bellow;
+
+            s->floors[1][i] |= (falling & BOTTOM) >> (V_SHIFT * (HEIGHT - 1));
+
+            s->floors[0][i] = (falling << V_SHIFT) | (s->floors[0][i] & ~falling);
+            all[0] |= s->floors[0][i];
+        }
+    } while (temp[0] != all[0] || temp[1] != all[1]);
+}
+
+void reference_gravity(state *s) {
+    assert(NUM_FLOORS == 2);
+    puyos_t all[2];
+    for (int i = 0; i < NUM_FLOORS; ++i) {
+        all[i] = 0;
+        for (int j = 0; j < NUM_COLORS; ++j) {
+            all[i] |= s->floors[i][j];
+        }
+    }
     for (int i = 0; i < WIDTH; ++i) {
         int pile_size = 0;
         for (int j = 0; j < TOTAL_HEIGHT; ++j) {
@@ -264,6 +295,7 @@ void test_lrand() {
 
 void test_gravity() {
     state *s = calloc(1, sizeof(state));
+    state *ref = calloc(1, sizeof(state));
     srand(time(NULL));
     int puyo_count = 0;
     for (int j = 0; j < NUM_FLOORS; j++) {
@@ -274,17 +306,21 @@ void test_gravity() {
             allowed ^= candidates;
             s->floors[j][i] = candidates;
             puyo_count += popcount(candidates);
+            ref->floors[j][i] = s->floors[j][i];
         }
     }
     print_state(s);
     handle_gravity(s);
+    reference_gravity(ref);
+    print_state(s);
+    print_state(ref);
     int new_puyo_count = 0;
     for (int j = 0; j < NUM_FLOORS; j++) {
         for (int i = 0; i < NUM_COLORS; ++i) {
             new_puyo_count += popcount(s->floors[j][i]);
+            assert(ref->floors[j][i] == s->floors[j][i]);
         }
     }
-    print_state(s);
     assert(puyo_count == new_puyo_count);
 }
 
@@ -324,11 +360,16 @@ void test_clear() {
 }
 
 int main() {
-    state *s = calloc(1, sizeof(state));
+    state *s = malloc(sizeof(state));
     srand(time(NULL));
 
     unsigned long total_chain = 0;
     for (unsigned long k = 0; k < 1000000; ++k) {
+        for (int j = 0; j < NUM_FLOORS; j++) {
+            for (int i = 0; i < NUM_COLORS; ++i) {
+                s->floors[j][i] = 0;
+            }
+        }
         for (int i = 0; i < WIDTH * HEIGHT; ++i) {
             for (int j = 0; j < NUM_FLOORS; ++j) {
                 int color = rand() % NUM_COLORS;
