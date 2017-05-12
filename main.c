@@ -4,7 +4,7 @@
 #include <time.h>
 
 #define WIDTH (6)
-#define HEIGTH (10)
+#define HEIGHT (10)
 #define H_SHIFT (1)
 #define V_SHIFT (6)
 #define FULL (0xfffffffffffffffULL)
@@ -75,9 +75,9 @@ void print_state(state *s) {
     }
     printf("\n");
     for (int j = 0; j < NUM_FLOORS; ++j) {
-        for (int i = 0; i < HEIGTH * WIDTH; ++i) {
+        for (int i = 0; i < HEIGHT * WIDTH; ++i) {
             if (i % V_SHIFT == 0) {
-                int l = i / V_SHIFT + j * HEIGTH;
+                int l = i / V_SHIFT + j * HEIGHT;
                 if (l < 10) {
                     printf("%d", l);
                 } else {
@@ -146,7 +146,7 @@ int clear_groups(state *s) {
         puyos_t top = s->floors[0][i];
         puyos_t bottom = s->floors[1][i];
 
-        for (int j = 0; j < HEIGTH * WIDTH; j += 2) {
+        for (int j = 0; j < HEIGHT * WIDTH; j += 2) {
             puyos_t top_group = 3ULL << j;
             puyos_t bottom_group = 0;
             puyos_t top_extra = 0;
@@ -154,11 +154,11 @@ int clear_groups(state *s) {
             top_group = flood(top_group, top);
             top ^= top_group;
             if (top_group & BOTTOM) {
-                bottom_group = top_group >> (V_SHIFT * (HEIGTH - 1));
+                bottom_group = top_group >> (V_SHIFT * (HEIGHT - 1));
                 bottom_group = flood(bottom_group, bottom);
                 bottom ^= bottom_group;
                 if (bottom_group & TOP) {
-                    top_extra = bottom_group << (V_SHIFT * (HEIGTH - 1));
+                    top_extra = bottom_group << (V_SHIFT * (HEIGHT - 1));
                     top_extra = flood(top_group, top);
                     top ^= top_extra;
                     top_group |= top_extra;
@@ -172,8 +172,8 @@ int clear_groups(state *s) {
                 s->floors[1][i] ^= bottom_group;
                 num_cleared += group_size;
 
-                s->floors[0][GARBAGE] &= ~(cross(top_group) | ((bottom_group & TOP) << (V_SHIFT * (HEIGTH - 1))));
-                s->floors[1][GARBAGE] &= ~(cross(bottom_group) | ((top_group & BOTTOM) >> (V_SHIFT * (HEIGTH - 1))));
+                s->floors[0][GARBAGE] &= ~(cross(top_group) | ((bottom_group & TOP) << (V_SHIFT * (HEIGHT - 1))));
+                s->floors[1][GARBAGE] &= ~(cross(bottom_group) | ((top_group & BOTTOM) >> (V_SHIFT * (HEIGHT - 1))));
             }
 
             bottom_group = 3ULL << j;
@@ -184,7 +184,7 @@ int clear_groups(state *s) {
                 s->floors[1][i] ^= bottom_group;
                 num_cleared += group_size;
 
-                s->floors[0][GARBAGE] &= ~((bottom_group & TOP) << (V_SHIFT * (HEIGTH - 1)));
+                s->floors[0][GARBAGE] &= ~((bottom_group & TOP) << (V_SHIFT * (HEIGHT - 1)));
                 s->floors[1][GARBAGE] &= ~cross(bottom_group);
             }
         }
@@ -195,10 +195,11 @@ int clear_groups(state *s) {
 // Reference for bit parallel gravity
 puyos_t drop_once(puyos_t puyos) {
     puyos_t line = BOTTOM;
-    for (int i = 0; i < HEIGTH; ++i) {
-        puyos_t above = (puyos << V_SHIFT) & line;
+    for (int i = 0; i < HEIGHT - 1; ++i) {
+        puyos_t bellow = puyos & line;
+        puyos_t falling = ((puyos << V_SHIFT) & ~bellow) & line;
+        puyos = ((puyos & bellow) | falling) | (puyos & ~(falling >> V_SHIFT)) | (puyos & ~(line | (line >> V_SHIFT)));
         line >>= V_SHIFT;
-        puyos = (puyos & ~line) | above | ((above & puyos) >> V_SHIFT);
     }
     return puyos;
 }
@@ -211,14 +212,15 @@ void handle_gravity(state *s) {
             all[i] |= s->floors[i][j];
         }
     }
+
     for (int i = 0; i < WIDTH; ++i) {
         int pile_size = 0;
         for (int j = 0; j < TOTAL_HEIGHT; ++j) {
             int scanner_floor = 1;
-            int scanner_y = HEIGTH - 1 - j;
-            if (j >= HEIGTH) {
+            int scanner_y = HEIGHT - 1 - j;
+            if (j >= HEIGHT) {
                 scanner_floor = 0;
-                scanner_y = 2 * HEIGTH - 1 - j;
+                scanner_y = 2 * HEIGHT - 1 - j;
             }
             puyos_t scanner = 1ULL << (scanner_y * WIDTH + i);
             if (!(scanner & all[scanner_floor])) {
@@ -228,10 +230,10 @@ void handle_gravity(state *s) {
                 if (scanner & s->floors[scanner_floor][k]) {
                     s->floors[scanner_floor][k] ^= scanner;
                     int pile_floor = 1;
-                    int pile_y = HEIGTH - 1 - pile_size;
-                    if (pile_size >= HEIGTH) {
+                    int pile_y = HEIGHT - 1 - pile_size;
+                    if (pile_size >= HEIGHT) {
                         pile_floor = 0;
-                        pile_y = 2 * HEIGTH - 1 - pile_size;
+                        pile_y = 2 * HEIGHT - 1 - pile_size;
                     }
                     s->floors[pile_floor][k] |= 1ULL << (pile_y * WIDTH + i);
                     ++pile_size;
@@ -291,14 +293,14 @@ void test_clear() {
     puyos_t test_group;
     state *s = calloc(1, sizeof(state));
     srand(time(NULL));
-    for (int i = 0; i < WIDTH * HEIGTH; ++i) {
+    for (int i = 0; i < WIDTH * HEIGHT; ++i) {
         for (int j = 0; j < NUM_FLOORS; ++j) {
             int color = rand() % NUM_COLORS;
             s->floors[j][color] |= 1ULL << i;
         }
     }
     for (test_color = 0; test_color < NUM_COLORS - 1; ++test_color) {
-        for (int i = 0; i < WIDTH * HEIGTH; ++i) {
+        for (int i = 0; i < WIDTH * HEIGHT; ++i) {
             test_group = flood(1ULL << i, s->floors[0][test_color]);
             if (popcount(test_group) >= CLEAR_THRESHOLD) {
                 break;
@@ -322,16 +324,12 @@ void test_clear() {
 }
 
 int main() {
-    // test_lrand();
-    // test_gravity();
-    // test_clear();
-
     state *s = calloc(1, sizeof(state));
     srand(time(NULL));
 
     unsigned long total_chain = 0;
     for (unsigned long k = 0; k < 1000000; ++k) {
-        for (int i = 0; i < WIDTH * HEIGTH; ++i) {
+        for (int i = 0; i < WIDTH * HEIGHT; ++i) {
             for (int j = 0; j < NUM_FLOORS; ++j) {
                 int color = rand() % NUM_COLORS;
                 s->floors[j][color] |= 1ULL << i;
