@@ -309,7 +309,14 @@ int resolve(state *s) {
         handle_gravity(s);
         kill_puyos(s);
     } while(clear_groups(s));
-    return chain;
+    int all_clear_bonus = 2;
+    for (int i = 0; i < NUM_COLORS; ++i) {
+        if (s->floors[NUM_FLOORS - 1][i]) {
+            all_clear_bonus = 0;
+            break;
+        }
+    }
+    return chain + all_clear_bonus;
 }
 
 void benchmark_resolve(unsigned long iterations) {
@@ -352,7 +359,7 @@ void demo() {
             return;
         }
         print_state(s);
-        printf("chain=%d\n", resolve(s));
+        printf("score=%d\n", resolve(s));
         for (int j = 0; j < 2; ++j) {
             deals[j] = deals[j + 1];
         }
@@ -363,7 +370,6 @@ void demo() {
 #include "test.c"
 
 int main() {
-    test_all();
     demo();
     return 0;
 }

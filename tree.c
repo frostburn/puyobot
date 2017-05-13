@@ -244,6 +244,13 @@ float eval_fun_weighted(state *s) {
                 break;
             }
             double score = resolve(c);
+            int num_remaining = 0;
+            for (int j = 0; j < NUM_FLOORS; ++j) {
+                for (int i = 0; i < NUM_COLORS; ++i) {
+                    num_remaining += popcount(c->floors[j][i]);
+                }
+            }
+            score += 1.5 * exp(-0.3 * num_remaining);
             double weight = exp(-state_euler(c));
             total_weight += weight;
             total_score += score * weight;
