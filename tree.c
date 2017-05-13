@@ -33,6 +33,8 @@ typedef struct choice_branch
     struct value_node *destination;
 } choice_branch;
 
+typedef float (*eval_fun)(state *s);
+
 static content_t CHOICES[NUM_CHOICES] = {
     0 | CHOICE_0, 1 | CHOICE_0, 2 | CHOICE_0, 3 | CHOICE_0, 4 | CHOICE_0, 5 | CHOICE_0,
     0 | CHOICE_90, 1 | CHOICE_90, 2 | CHOICE_90, 3 | CHOICE_90, 4 | CHOICE_90,
@@ -42,6 +44,10 @@ static content_t CHOICES[NUM_CHOICES] = {
 
 content_t make_piece(content_t color1, content_t color2) {
     return color1 | (color2 << COLOR2_SHIFT);
+}
+
+content_t rand_piece() {
+    return make_piece(rand() % (NUM_COLORS - 1), rand() % (NUM_COLORS - 1));
 }
 
 int apply_deal_and_choice(state *s, content_t deal, content_t choice) {
@@ -121,7 +127,10 @@ void expand(value_node *root) {
     }
 }
 
-float evaluate(state *s, value_node *root) {
+float evaluate(state *s, value_node *root, eval_fun f) {
+    if (root->num_deals == 0) {
+        return f(s);
+    }
     root->value = 0;
     for (num_t j = 0; j < root->num_deals; ++j) {
         float deal_value = 0;
@@ -129,11 +138,15 @@ float evaluate(state *s, value_node *root) {
         for (num_t k = 0; k < root->deals[j].num_choices; ++k) {
             state *child = copy_state(s);
             float current_value = apply_deal_and_choice(child, root->deals[j].content, root->deals[j].choices[k].content);
-            float future_value = evaluate(child, root->deals[j].choices[k].destination);
+            float future_value = evaluate(child, root->deals[j].choices[k].destination, f);
             if (current_value > future_value) {
                 root->deals[j].choices[k].destination->value = current_value;
             } else {
                 root->deals[j].choices[k].destination->value = future_value;
+            }
+            // Special case for death.
+            if (current_value < 0) {
+                root->deals[j].choices[k].destination->value = current_value;
             }
             free(child);
             if (root->deals[j].choices[k].destination->value > deal_value) {
@@ -196,13 +209,30 @@ void free_tree(value_node *root) {
     free(root);
 }
 
-content_t solve(state *s, content_t *deals, size_t num_deals, size_t depth) {
+float eval_fun_zero(state *s) {
+    return 0;
+}
+
+float eval_fun_random(state *s) {
+    state *c;
+    int total_score = 0;
+    for (int i = 0; i < 10; ++i) {
+        c = copy_state(s);
+        for (int j = 0; j < 20; ++j) {
+            total_score += apply_deal_and_choice(c, rand_piece(), CHOICES[rand() % NUM_CHOICES]);
+        }
+        free(c);
+    }
+    return total_score * 0.1;
+}
+
+content_t solve(state *s, content_t *deals, size_t num_deals, size_t depth, eval_fun f) {
     value_node *root = calloc(1, sizeof(value_node));
     append_deals(root, deals, num_deals);
     for (size_t i = 0; i < depth; ++i) {
         expand(root);
     }
-    evaluate(s, root);
+    evaluate(s, root, f);
     content_t choice = choose(root);
     free_tree(root);
     return choice;
