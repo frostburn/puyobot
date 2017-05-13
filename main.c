@@ -15,6 +15,11 @@
 #define LEFT_WALL (0x41041041041041ULL)
 #define RIGHT_BLOCK (0xfbefbefbefbefbeULL)
 
+#define GHOST_Y (7)
+#define DEATH_BLOCK (0x3ffffffffffULL)
+#define GHOST_LINE (0xfc0000000000ULL)
+#define LIFE_BLOCK (0xfff000000000000ULL)
+
 #define NUM_FLOORS (2)
 #define TOTAL_HEIGHT (20)
 #define NUM_COLORS (6)
@@ -108,7 +113,11 @@ void print_state(state *s) {
             int any = 0;
             for (int k = 0; k < NUM_COLORS; ++k) {
                 if (p & s->floors[j][k]) {
-                    printf("\x1b[3%d;1m", k + 1);
+                    if (j == 0 && i / WIDTH == GHOST_Y) {
+                        printf("\x1b[3%dm", k + 1);
+                    } else {
+                        printf("\x1b[3%d;1m", k + 1);
+                    }
                     if (k == GARBAGE) {
                         printf(" ◎");
                     } else {
@@ -194,7 +203,7 @@ int clear_groups(state *s) {
     assert(WIDTH % 2 == 0);
     int num_cleared = 0;
     for (int i = 0; i < NUM_COLORS - 1; ++i) {
-        puyos_t top = s->floors[0][i];
+        puyos_t top = s->floors[0][i] & LIFE_BLOCK;
         puyos_t bottom = s->floors[1][i];
 
         for (int j = 0; j < HEIGHT * WIDTH; j += 2) {
@@ -223,7 +232,7 @@ int clear_groups(state *s) {
                 s->floors[1][i] ^= bottom_group;
                 num_cleared += group_size;
 
-                s->floors[0][GARBAGE] &= ~(cross(top_group) | ((bottom_group & TOP) << (V_SHIFT * (HEIGHT - 1))));
+                s->floors[0][GARBAGE] &= ~((cross(top_group) & LIFE_BLOCK) | ((bottom_group & TOP) << (V_SHIFT * (HEIGHT - 1))));
                 s->floors[1][GARBAGE] &= ~(cross(bottom_group) | ((top_group & BOTTOM) >> (V_SHIFT * (HEIGHT - 1))));
             }
         }
@@ -287,11 +296,18 @@ void handle_gravity(state *s) {
     } while (temp[0] != all[0] || temp[1] != all[1]);
 }
 
+void kill_puyos(state *s) {
+    for (int i = 0; i < NUM_COLORS; ++i) {
+        s->floors[0][i] &= ~DEATH_BLOCK;
+    }
+}
+
 int resolve(state *s) {
     int chain = -1;
     do {
         ++chain;
         handle_gravity(s);
+        kill_puyos(s);
     } while(clear_groups(s));
     return chain;
 }
@@ -347,6 +363,7 @@ void demo() {
 #include "test.c"
 
 int main() {
+    test_all();
     demo();
     return 0;
 }

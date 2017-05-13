@@ -91,7 +91,7 @@ void test_clear() {
     }
     for (test_color = 0; test_color < NUM_COLORS - 1; ++test_color) {
         for (int i = 0; i < WIDTH * HEIGHT; ++i) {
-            test_group = flood(1ULL << i, s->floors[0][test_color]);
+            test_group = flood(1ULL << i, s->floors[1][test_color]);
             if (popcount(test_group) >= CLEAR_THRESHOLD) {
                 break;
             }
@@ -108,14 +108,14 @@ void test_clear() {
     clear_groups(s);
     print_state(s);
     if (test_group) {
-        assert(!(s->floors[0][test_color] & test_group));
-        assert(!(s->floors[0][GARBAGE] & cross(test_group)));
+        assert(!(s->floors[1][test_color] & test_group));
+        assert(!(s->floors[1][GARBAGE] & cross(test_group)));
     }
 }
 
 void test_clear_with_shift() {
     puyos_t noise = 3833423454597982578ULL & FULL;
-    for (int i = 0; i < HEIGHT + 1; ++i) {
+    for (int i = GHOST_Y + 1; i < HEIGHT + 1; ++i) {
         state *s = calloc(1, sizeof(state));
         s->floors[0][0] = noise;
         for (int j = 0; j < i; ++j) {
@@ -129,4 +129,26 @@ void test_clear_with_shift() {
         assert(popcount(s->floors[0][0]) + popcount(s->floors[1][0]) == 12);
         free(s);
     }
+}
+
+void test_ghost_chain() {
+    state *s = calloc(1, sizeof(state));
+    s->floors[1][GARBAGE] = FULL;
+    s->floors[0][GARBAGE] = ~DEATH_BLOCK;
+    s->floors[0][RED] = 15ULL << (V_SHIFT * (GHOST_Y + 1));
+    s->floors[0][RED] |= 3ULL << (2 + V_SHIFT * (GHOST_Y));
+    s->floors[0][RED] |= 3ULL << (4 + V_SHIFT * (GHOST_Y + 2));
+    s->floors[0][GARBAGE] &= ~s->floors[0][RED];
+    print_state(s);
+    resolve(s);
+    print_state(s);
+    assert(!s->floors[0][RED]);
+}
+
+void test_all() {
+    test_lrand();
+    test_gravity();
+    test_clear();
+    test_clear_with_shift();
+    test_ghost_chain();
 }

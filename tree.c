@@ -72,18 +72,17 @@ int apply_deal_and_choice(state *s, content_t deal, content_t choice) {
     for (int i = 0; i < NUM_COLORS; ++i) {
         all |= s->floors[0][i];
     }
+    if (
+        ((1ULL << (color1_x + V_SHIFT * GHOST_Y)) & all) &&
+        ((1ULL << (color2_x + V_SHIFT * GHOST_Y)) & all)
+    ) {
+        return 0;
+    }
     puyos_t puyo1 = 1ULL << (color1_x + V_SHIFT * color1_y);
-    if (all & puyo1) {
-        return 0;
-    } else {
-        s->floors[0][color1] |= puyo1;
-    }
+    s->floors[0][color1] |= puyo1;
     puyos_t puyo2 = 1ULL << (color2_x + V_SHIFT * color2_y);
-    if (all & puyo2) {
-        return 0;
-    } else {
-        s->floors[0][color2] |= puyo2;
-    }
+    s->floors[0][color2] |= puyo2;
+
     return 1;
 }
 
