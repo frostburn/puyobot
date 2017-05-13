@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <math.h>
 
 #define WIDTH (6)
 #define HEIGHT (10)
@@ -156,6 +157,38 @@ puyos_t flood(register puyos_t source, register puyos_t target) {
     return source;
 }
 
+// Number of (diagonally connected) objects minus the number of holes
+int euler(puyos_t puyos) {
+    int pixels;
+    int edges;
+    int vertices;
+    edges = popcount(puyos & LEFT_WALL); // left edges
+    vertices = edges; // left vertices but not the corner
+    vertices += puyos & 1;  // the corner
+    puyos_t temp = puyos | ((puyos & RIGHT_BLOCK) >> H_SHIFT);
+    edges += popcount(temp);  // rest of the vertical edges
+    vertices += popcount(temp & TOP);  // top vertices but not the corner
+    vertices += popcount(temp | (temp >> V_SHIFT));  // rest of the vertices
+    edges += popcount(puyos & TOP);  // northern horizontal edges
+    edges += popcount(puyos | (puyos >> V_SHIFT));  // rest of the horizontal edges
+    pixels = popcount(puyos);  // pixels
+
+    // This is always broken so leaving the debug print here.
+    // printf("e=%d, v=%d, p=%d\n", edges, vertices, pixels);
+
+    return pixels - edges + vertices;
+}
+
+int state_euler(state *s) {
+    int total = 0;
+    for (int i = 0; i < NUM_FLOORS; ++i) {
+        for (int j = 0; j < NUM_COLORS - 1; ++j) {
+            total += euler(s->floors[i][j]);
+        }
+    }
+    return total;
+}
+
 int clear_groups(state *s) {
     assert(NUM_FLOORS == 2);
     assert(WIDTH % 2 == 0);
@@ -297,7 +330,7 @@ void demo() {
     }
 
     for (int i = 0; i < 10000; ++i) {
-        content_t choice = solve(s, deals, 3, 0, &eval_fun_random);
+        content_t choice = solve(s, deals, 3, 0, &eval_fun_weighted);
         if (!apply_deal_and_choice(s, deals[0], choice)) {
             printf("Game Over\n");
             return;

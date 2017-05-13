@@ -221,7 +221,7 @@ float eval_fun_zero(state *s) {
 float eval_fun_random(state *s) {
     state *c;
     int total_score = 0;
-    for (int i = 0; i < 20; ++i) {
+    for (int i = 0; i < 10; ++i) {
         c = copy_state(s);
         for (int j = 0; j < 25; ++j) {
             if(!apply_deal_and_choice(c, rand_piece(), CHOICES[rand() % NUM_CHOICES])) {
@@ -231,7 +231,27 @@ float eval_fun_random(state *s) {
         }
         free(c);
     }
-    return total_score * 0.05;
+    return total_score * 0.1;
+}
+
+float eval_fun_weighted(state *s) {
+    state *c;
+    double total_score = 0;
+    double total_weight = 0;
+    for (int i = 0; i < 10; ++i) {
+        c = copy_state(s);
+        for (int j = 0; j < 25; ++j) {
+            if(!apply_deal_and_choice(c, rand_piece(), CHOICES[rand() % NUM_CHOICES])) {
+                break;
+            }
+            double score = resolve(c);
+            double weight = exp(-state_euler(c));
+            total_weight += weight;
+            total_score += score * weight;
+        }
+        free(c);
+    }
+    return total_score / total_weight;
 }
 
 content_t solve(state *s, content_t *deals, size_t num_deals, size_t depth, eval_fun f) {
