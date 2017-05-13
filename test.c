@@ -112,3 +112,21 @@ void test_clear() {
         assert(!(s->floors[0][GARBAGE] & cross(test_group)));
     }
 }
+
+void test_clear_with_shift() {
+    puyos_t noise = 3833423454597982578ULL & FULL;
+    for (int i = 0; i < HEIGHT + 1; ++i) {
+        state *s = calloc(1, sizeof(state));
+        s->floors[0][0] = noise;
+        for (int j = 0; j < i; ++j) {
+            shift_down(s);
+        }
+        print_state(s);
+        printf("%d, %d\n", popcount(s->floors[0][0]), popcount(s->floors[1][0]));
+        assert(popcount(s->floors[0][0]) + popcount(s->floors[1][0]) == 29);
+        clear_groups(s);
+        print_state(s);
+        assert(popcount(s->floors[0][0]) + popcount(s->floors[1][0]) == 12);
+        free(s);
+    }
+}

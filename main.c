@@ -47,6 +47,19 @@ puyos_t lrand() {
     return rand() | (((puyos_t) rand()) << 31) | (((puyos_t) rand()) << 62);
 }
 
+void shift_down(state *s) {
+    for (int j = 0; j < NUM_COLORS; ++j) {
+        puyos_t leak = 0;
+        for (int i = 0; i < NUM_FLOORS; ++i) {
+            puyos_t temp = s->floors[i][j] & BOTTOM;
+            s->floors[i][j] <<= V_SHIFT;
+            s->floors[i][j] |= leak >> (V_SHIFT * (HEIGHT - 1));
+            s->floors[i][j] &= FULL;
+            leak = temp;
+        }
+    }
+}
+
 void print_puyos(puyos_t puyos) {
     printf(" ");
     for (int i = 0; i < WIDTH; ++i) {
@@ -159,12 +172,12 @@ int clear_groups(state *s) {
             top_group = flood(top_group, top);
             top ^= top_group;
             if (top_group & BOTTOM) {
-                bottom_group = top_group >> (V_SHIFT * (HEIGHT - 1));
+                bottom_group = (top_group & BOTTOM) >> (V_SHIFT * (HEIGHT - 1));
                 bottom_group = flood(bottom_group, bottom);
                 bottom ^= bottom_group;
                 if (bottom_group & TOP) {
-                    top_extra = bottom_group << (V_SHIFT * (HEIGHT - 1));
-                    top_extra = flood(top_group, top);
+                    top_extra = (bottom_group & TOP) << (V_SHIFT * (HEIGHT - 1));
+                    top_extra = flood(top_extra, top);
                     top ^= top_extra;
                     top_group |= top_extra;
                     // XXX: It's not correct to stop here, but we don't care.
@@ -180,11 +193,12 @@ int clear_groups(state *s) {
                 s->floors[0][GARBAGE] &= ~(cross(top_group) | ((bottom_group & TOP) << (V_SHIFT * (HEIGHT - 1))));
                 s->floors[1][GARBAGE] &= ~(cross(bottom_group) | ((top_group & BOTTOM) >> (V_SHIFT * (HEIGHT - 1))));
             }
-
-            bottom_group = 3ULL << j;
+        }
+        for (int j = 0; j < HEIGHT * WIDTH; j += 2) {
+            puyos_t bottom_group = 3ULL << j;
             bottom_group = flood(bottom_group, bottom);
             bottom ^= bottom_group;
-            group_size = popcount(bottom_group);
+            int group_size = popcount(bottom_group);
             if (group_size >= CLEAR_THRESHOLD) {
                 s->floors[1][i] ^= bottom_group;
                 num_cleared += group_size;
@@ -273,7 +287,7 @@ void benchmark_resolve(unsigned long iterations) {
 
 #include "tree.c"
 
-int main() {
+void demo() {
     srand(time(NULL));
     state *s = calloc(1, sizeof(state));
     content_t deals[3];
@@ -292,6 +306,11 @@ int main() {
         }
         deals[2] = rand_piece();
     }
+}
 
+#include "test.c"
+
+int main() {
+    test_clear_with_shift();
     return 0;
 }
