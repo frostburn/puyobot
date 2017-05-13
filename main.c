@@ -281,11 +281,11 @@ int main() {
 
     content_t deals[2] = {make_piece(GREEN, BLUE), make_piece(RED, RED)};
 
-    content_t choice = solve(s, deals, 2);
+    content_t choice = solve(s, deals, 2, 1);
     apply_deal_and_choice(s, deals[0], choice);
     print_state(s);
 
-    choice = solve(s, deals + 1, 1);
+    choice = solve(s, deals + 1, 1, 1);
     apply_deal_and_choice(s, deals[1], choice);
     print_state(s);
 

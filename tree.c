@@ -77,6 +77,7 @@ int apply_deal_and_choice(state *s, content_t deal, content_t choice) {
     return resolve(s);
 }
 
+// Deterministic deals
 void append_deals(value_node *root, content_t *deals, size_t num_deals) {
     if (!num_deals) {
         return;
@@ -85,23 +86,46 @@ void append_deals(value_node *root, content_t *deals, size_t num_deals) {
     root->deals = calloc(root->num_deals, sizeof(dealt_node));
     root->deals[0].content = deals[0];
     root->deals[0].probability = 1;
-    for (num_t j = 0; j < root->num_deals; ++j) {
-        root->deals[j].num_choices = NUM_CHOICES;
-        root->deals[j].choices = calloc(root->deals[j].num_choices, sizeof(choice_branch));
-        for (num_t k = 0; k < root->deals[j].num_choices; ++k) {
-            root->deals[j].choices[k].content = CHOICES[k];
-            root->deals[j].choices[k].probability = 1.0 / NUM_CHOICES;
-            root->deals[j].choices[k].destination = calloc(1, sizeof(value_node));
-            append_deals(root->deals[j].choices[k].destination, deals + 1, num_deals - 1);
+    root->deals[0].num_choices = NUM_CHOICES;
+    root->deals[0].choices = calloc(root->deals[0].num_choices, sizeof(choice_branch));
+    for (num_t k = 0; k < root->deals[0].num_choices; ++k) {
+        root->deals[0].choices[k].content = CHOICES[k];
+        root->deals[0].choices[k].probability = 1.0 / NUM_CHOICES;
+        root->deals[0].choices[k].destination = calloc(1, sizeof(value_node));
+        append_deals(root->deals[0].choices[k].destination, deals + 1, num_deals - 1);
+    }
+}
+
+// Probabilistic deals
+void expand(value_node *root) {
+    if (root->num_deals == 0) {
+        root->num_deals = NUM_COLORS * NUM_COLORS;
+        root->deals = calloc(root->num_deals, sizeof(dealt_node));
+        for (num_t i = 0; i < root->num_deals; ++i) {
+            root->deals[i].content = make_piece(i % NUM_COLORS, i / NUM_COLORS);
+            root->deals[i].probability = 1.0 / root->num_deals;
+            root->deals[i].num_choices = NUM_CHOICES;
+            root->deals[i].choices = calloc(root->deals[i].num_choices, sizeof(choice_branch));
+            for (num_t k = 0; k < root->deals[i].num_choices; ++k) {
+                root->deals[i].choices[k].content = CHOICES[k];
+                root->deals[i].choices[k].probability = 1.0 / NUM_CHOICES;
+                root->deals[i].choices[k].destination = calloc(1, sizeof(value_node));
+            }
+        }
+    } else {
+        for (num_t i = 0; i < root->num_deals; ++i) {
+            for (num_t k = 0; k < root->deals[i].num_choices; ++k) {
+                expand(root->deals[i].choices[k].destination);
+            }
         }
     }
-    
 }
 
 float evaluate(state *s, value_node *root) {
     root->value = 0;
     for (num_t j = 0; j < root->num_deals; ++j) {
         float deal_value = 0;
+        num_t num_best = 0;
         for (num_t k = 0; k < root->deals[j].num_choices; ++k) {
             state *child = copy_state(s);
             float current_value = apply_deal_and_choice(child, root->deals[j].content, root->deals[j].choices[k].content);
@@ -114,7 +138,16 @@ float evaluate(state *s, value_node *root) {
             free(child);
             if (root->deals[j].choices[k].destination->value > deal_value) {
                 deal_value = root->deals[j].choices[k].destination->value;
-                // TODO: Set greedy choice probabilities.
+                num_best = 1;
+            } else if (root->deals[j].choices[k].destination->value == deal_value) {
+                ++num_best;
+            }
+        }
+        for (num_t k = 0; k < root->deals[j].num_choices; ++k) {
+            if (root->deals[j].choices[k].destination->value == deal_value) {
+                root->deals[j].choices[k].probability = 1.0 / num_best;
+            } else {
+                root->deals[j].choices[k].probability = 0;
             }
         }
         root->value += root->deals[j].probability * deal_value;
@@ -127,19 +160,22 @@ content_t best_choice(value_node *root) {
         return 0;
     }
     content_t best_action = 0;
-    float best_value = 0;
+    float highest_probability = 0;
     for (num_t i = 0; i < root->deals->num_choices; ++i) {
-        if (root->deals->choices[i].destination->value > best_value) {
-            best_value = root->deals->choices[i].destination->value;
+        if (root->deals->choices[i].probability > highest_probability) {
+            highest_probability = root->deals->choices[i].probability;
             best_action = root->deals->choices[i].content;
         }
     }
     return best_action;
 }
 
-content_t solve(state *s, content_t *deals, size_t num_deals) {
+content_t solve(state *s, content_t *deals, size_t num_deals, size_t depth) {
     value_node *root = calloc(1, sizeof(value_node));
     append_deals(root, deals, num_deals);
+    for (size_t i = 0; i < depth; ++i) {
+        expand(root);
+    }
     evaluate(s, root);
     return best_choice(root);
 }
