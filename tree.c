@@ -170,6 +170,32 @@ content_t best_choice(value_node *root) {
     return best_action;
 }
 
+content_t choose(value_node *root) {
+    if (root->num_deals != 1) {
+        return 0;
+    }
+    double prob = rand() / ((double) RAND_MAX);
+    for (num_t i = 0; i < root->deals->num_choices; ++i) {
+        prob -= root->deals->choices[i].probability;
+        if (prob <= 0) {
+            return root->deals->choices[i].content;
+        }
+    }
+    return 0;
+}
+
+void free_tree(value_node *root) {
+    for (num_t i = 0; i < root->num_deals; ++i) {
+        for (num_t k = 0; k < root->deals[i].num_choices; ++k) {
+            free_tree(root->deals[i].choices[k].destination);
+        }
+        free(root->deals[i].choices);
+
+    }
+    free(root->deals);
+    free(root);
+}
+
 content_t solve(state *s, content_t *deals, size_t num_deals, size_t depth) {
     value_node *root = calloc(1, sizeof(value_node));
     append_deals(root, deals, num_deals);
@@ -177,5 +203,7 @@ content_t solve(state *s, content_t *deals, size_t num_deals, size_t depth) {
         expand(root);
     }
     evaluate(s, root);
-    return best_choice(root);
+    content_t choice = choose(root);
+    free_tree(root);
+    return choice;
 }

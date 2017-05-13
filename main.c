@@ -274,20 +274,25 @@ void benchmark_resolve(unsigned long iterations) {
 #include "tree.c"
 
 int main() {
+    srand(time(NULL));
     state *s = calloc(1, sizeof(state));
-    s->floors[0][0] |= 12;
-    resolve(s);
-    print_state(s);
 
-    content_t deals[2] = {make_piece(GREEN, BLUE), make_piece(RED, RED)};
+    content_t deals[3];
 
-    content_t choice = solve(s, deals, 2, 1);
-    apply_deal_and_choice(s, deals[0], choice);
-    print_state(s);
+    int c = NUM_COLORS - 1;
+    for (int i = 0; i < 3; ++i) {
+        deals[i] = make_piece(rand() % c, rand() % c);
+    }
 
-    choice = solve(s, deals + 1, 1, 1);
-    apply_deal_and_choice(s, deals[1], choice);
-    print_state(s);
+    for (int i = 0; i < 10000; ++i) {
+        content_t choice = solve(s, deals, 3, 1);
+        apply_deal_and_choice(s, deals[0], choice);
+        print_state(s);
+        for (int j = 0; j < 2; ++j) {
+            deals[j] = deals[j + 1];
+        }
+        deals[2] = make_piece(rand() % c, rand() % c);
+    }
 
     return 0;
 }
