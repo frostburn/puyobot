@@ -68,19 +68,23 @@ int apply_deal_and_choice(state *s, content_t deal, content_t choice) {
         color1_x++;
         color2_y--;
     }
+    puyos_t all = 0;
+    for (int i = 0; i < NUM_COLORS; ++i) {
+        all |= s->floors[0][i];
+    }
     puyos_t puyo1 = 1ULL << (color1_x + V_SHIFT * color1_y);
-    if (s->floors[0][color1] & puyo1) {
-        return -1;
+    if (all & puyo1) {
+        return 0;
     } else {
         s->floors[0][color1] |= puyo1;
     }
     puyos_t puyo2 = 1ULL << (color2_x + V_SHIFT * color2_y);
-    if (s->floors[0][color2] & puyo2) {
-        return -1;
+    if (all & puyo2) {
+        return 0;
     } else {
         s->floors[0][color2] |= puyo2;
     }
-    return resolve(s);
+    return 1;
 }
 
 // Deterministic deals
@@ -137,16 +141,17 @@ float evaluate(state *s, value_node *root, eval_fun f) {
         num_t num_best = 0;
         for (num_t k = 0; k < root->deals[j].num_choices; ++k) {
             state *child = copy_state(s);
-            float current_value = apply_deal_and_choice(child, root->deals[j].content, root->deals[j].choices[k].content);
-            float future_value = evaluate(child, root->deals[j].choices[k].destination, f);
-            if (current_value > future_value) {
-                root->deals[j].choices[k].destination->value = current_value;
+            int legal = apply_deal_and_choice(child, root->deals[j].content, root->deals[j].choices[k].content);
+            if (legal) {
+                float current_value = resolve(child);
+                float future_value = evaluate(child, root->deals[j].choices[k].destination, f);
+                if (current_value > future_value) {
+                    root->deals[j].choices[k].destination->value = current_value;
+                } else {
+                    root->deals[j].choices[k].destination->value = future_value;
+                }
             } else {
-                root->deals[j].choices[k].destination->value = future_value;
-            }
-            // Special case for death.
-            if (current_value < 0) {
-                root->deals[j].choices[k].destination->value = current_value;
+                root->deals[j].choices[k].destination->value = -1;
             }
             free(child);
             if (root->deals[j].choices[k].destination->value > deal_value) {
@@ -216,14 +221,17 @@ float eval_fun_zero(state *s) {
 float eval_fun_random(state *s) {
     state *c;
     int total_score = 0;
-    for (int i = 0; i < 10; ++i) {
+    for (int i = 0; i < 20; ++i) {
         c = copy_state(s);
-        for (int j = 0; j < 20; ++j) {
-            total_score += apply_deal_and_choice(c, rand_piece(), CHOICES[rand() % NUM_CHOICES]);
+        for (int j = 0; j < 25; ++j) {
+            if(!apply_deal_and_choice(c, rand_piece(), CHOICES[rand() % NUM_CHOICES])) {
+                break;
+            }
+            total_score += resolve(c);
         }
         free(c);
     }
-    return total_score * 0.1;
+    return total_score * 0.05;
 }
 
 content_t solve(state *s, content_t *deals, size_t num_deals, size_t depth, eval_fun f) {

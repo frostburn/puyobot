@@ -298,9 +298,12 @@ void demo() {
 
     for (int i = 0; i < 10000; ++i) {
         content_t choice = solve(s, deals, 3, 0, &eval_fun_random);
-        int chain = apply_deal_and_choice(s, deals[0], choice);
+        if (!apply_deal_and_choice(s, deals[0], choice)) {
+            printf("Game Over\n");
+            return;
+        }
         print_state(s);
-        printf("chain=%d\n", chain);
+        printf("chain=%d\n", resolve(s));
         for (int j = 0; j < 2; ++j) {
             deals[j] = deals[j + 1];
         }
@@ -311,6 +314,6 @@ void demo() {
 #include "test.c"
 
 int main() {
-    test_clear_with_shift();
+    demo();
     return 0;
 }
