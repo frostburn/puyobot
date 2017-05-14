@@ -14,6 +14,8 @@
 #define BOTTOM (0xfc0000000000000ULL)
 #define LEFT_WALL (0x41041041041041ULL)
 #define RIGHT_BLOCK (0xfbefbefbefbefbeULL)
+#define RIGHT_WALL (0x820820820820820ULL)
+#define LEFT_BLOCK (0x7df7df7df7df7dfULL)
 
 #define GHOST_Y (7)
 #define DEATH_BLOCK (0x3ffffffffffULL)
@@ -51,6 +53,10 @@ int popcount(puyos_t puyos) {
 
 puyos_t lrand() {
     return rand() | (((puyos_t) rand()) << 31) | (((puyos_t) rand()) << 62);
+}
+
+double drand() {
+    return rand() / ((double) RAND_MAX);
 }
 
 void shift_down(state *s) {
@@ -168,19 +174,24 @@ puyos_t flood(register puyos_t source, register puyos_t target) {
 
 // Number of (diagonally connected) objects minus the number of holes
 int euler(puyos_t puyos) {
-    int pixels;
-    int edges;
-    int vertices;
-    edges = popcount(puyos & LEFT_WALL); // left edges
-    vertices = edges; // left vertices but not the corner
-    vertices += puyos & 1;  // the corner
-    puyos_t temp = puyos | ((puyos & RIGHT_BLOCK) >> H_SHIFT);
-    edges += popcount(temp);  // rest of the vertical edges
-    vertices += popcount(temp & TOP);  // top vertices but not the corner
-    vertices += popcount(temp | (temp >> V_SHIFT));  // rest of the vertices
-    edges += popcount(puyos & TOP);  // northern horizontal edges
-    edges += popcount(puyos | (puyos >> V_SHIFT));  // rest of the horizontal edges
-    pixels = popcount(puyos);  // pixels
+    int pixels = popcount(puyos);
+
+    int edges = 0;
+    edges += popcount(puyos & LEFT_WALL);
+    edges += popcount(puyos & TOP);
+    edges += popcount(puyos | ((puyos & RIGHT_BLOCK) >> H_SHIFT));
+    edges += popcount(puyos | (puyos >> V_SHIFT));
+
+    int vertices = 0;
+    vertices += puyos & 1;
+    vertices += popcount((puyos | (puyos >> V_SHIFT)) & LEFT_WALL);
+    vertices += popcount((puyos | ((puyos & RIGHT_BLOCK) >> H_SHIFT)) & TOP);
+    vertices += popcount(
+        puyos |
+        (puyos >> V_SHIFT) |
+        ((puyos & RIGHT_BLOCK) >> H_SHIFT) |
+        ((puyos & RIGHT_BLOCK) >> (V_SHIFT + H_SHIFT))
+    );
 
     // This is always broken so leaving the debug print here.
     // printf("e=%d, v=%d, p=%d\n", edges, vertices, pixels);
@@ -190,9 +201,31 @@ int euler(puyos_t puyos) {
 
 int state_euler(state *s) {
     int total = 0;
-    for (int i = 0; i < NUM_FLOORS; ++i) {
-        for (int j = 0; j < NUM_COLORS - 1; ++j) {
+    puyos_t bottom_edges = 0;
+    puyos_t bottom_vertices = 0;
+    puyos_t bottom_corner = 0;
+    for (int j = 0; j < NUM_COLORS - 1; ++j) {
+        for (int i = 0; i < NUM_FLOORS; ++i) {
             total += euler(s->floors[i][j]);
+
+            bottom_edges >>= (V_SHIFT * (HEIGHT - 1));
+            bottom_vertices >>= (V_SHIFT * (HEIGHT - 1));
+
+            puyos_t temp = s->floors[i][j] & TOP;
+            int edges = popcount(temp & bottom_edges);
+            int vertices = popcount((temp | ((temp & RIGHT_BLOCK) >> H_SHIFT)) & bottom_vertices);
+            if (bottom_corner && (temp & 1)) {
+                vertices += 1;
+            }
+            total += edges;
+            total -= vertices;
+
+            // This is always broken so leaving the debug print here.
+            // printf("double e=%d v=%d\n", edges, vertices);
+
+            bottom_edges = s->floors[i][j] & BOTTOM;
+            bottom_vertices = bottom_edges | ((bottom_edges & RIGHT_BLOCK) >> H_SHIFT);
+            bottom_corner = bottom_edges & LEFT_WALL;
         }
     }
     return total;
@@ -367,9 +400,40 @@ void demo() {
     }
 }
 
+void mc_demo() {
+    srand(time(NULL));
+    state *s = calloc(1, sizeof(state));
+    content_t deals[3];
+    int max_score = 0;
+
+    for (int i = 0; i < 3; ++i) {
+        deals[i] = rand_piece();
+    }
+
+    for (int i = 0; i < 10000; ++i) {
+        content_t choice = iterate_mc(s, deals, 3, 2000);
+        if (!apply_deal_and_choice(s, deals[0], choice)) {
+            print_state(s);
+            printf("Game Over\n");
+            return;
+        }
+        print_state(s);
+        int score = resolve(s);
+        if (score > max_score) {
+            max_score = score;
+        }
+        printf("score=%d, max=%d\n", score, max_score);
+        for (int j = 0; j < 2; ++j) {
+            deals[j] = deals[j + 1];
+        }
+        deals[2] = rand_piece();
+    }
+}
+
 #include "test.c"
 
 int main() {
-    demo();
+    test_all();
+    mc_demo();
     return 0;
 }

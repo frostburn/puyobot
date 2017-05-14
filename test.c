@@ -145,10 +145,45 @@ void test_ghost_chain() {
     assert(!s->floors[0][RED]);
 }
 
+void test_euler() {
+    srand(time(NULL));
+    puyos_t noise = lrand() & FULL & ~(TOP | BOTTOM | LEFT_WALL | RIGHT_WALL);
+    int e = euler(noise);
+    print_puyos(noise);
+    printf("e=%d\n", e);
+    assert(e == euler(noise >> H_SHIFT));
+    assert(e == euler(noise << H_SHIFT));
+    assert(e == euler(noise >> V_SHIFT));
+    assert(e == euler(noise >> V_SHIFT));
+}
+
+void test_state_euler() {
+    srand(time(NULL));
+    state *s = calloc(1, sizeof(state));
+    s->floors[0][0] = lrand() & FULL & ~(LEFT_WALL | RIGHT_WALL);
+    s->floors[1][0] = lrand() & FULL & ~(BOTTOM | LEFT_WALL | RIGHT_WALL);
+    int e = state_euler(s);
+    print_state(s);
+    printf("e=%d\n", e);
+    s->floors[0][0] <<= 1;
+    s->floors[1][0] <<= 1;
+    assert(e == state_euler(s));
+    s->floors[0][0] >>= 2;
+    s->floors[1][0] >>= 2;
+    assert(e == state_euler(s));
+    shift_down(s);
+    assert(e == state_euler(s));
+    s->floors[0][0] <<= 2;
+    s->floors[1][0] <<= 2;
+    assert(e == state_euler(s));
+}
+
 void test_all() {
     test_lrand();
     test_gravity();
     test_clear();
     test_clear_with_shift();
     test_ghost_chain();
+    test_euler();
+    test_state_euler();
 }

@@ -30,6 +30,7 @@ typedef struct choice_branch
 {
     content_t content;
     float probability;
+    size_t visits;
     struct value_node *destination;
 } choice_branch;
 
@@ -72,17 +73,17 @@ int apply_deal_and_choice(state *s, content_t deal, content_t choice) {
     for (int i = 0; i < NUM_COLORS; ++i) {
         all |= s->floors[0][i];
     }
+    puyos_t puyo1 = 1ULL << (color1_x + V_SHIFT * color1_y);
+    s->floors[0][color1] |= puyo1;
+    puyos_t puyo2 = 1ULL << (color2_x + V_SHIFT * color2_y);
+    s->floors[0][color2] |= puyo2;
+
     if (
         ((1ULL << (color1_x + V_SHIFT * GHOST_Y)) & all) &&
         ((1ULL << (color2_x + V_SHIFT * GHOST_Y)) & all)
     ) {
         return 0;
     }
-    puyos_t puyo1 = 1ULL << (color1_x + V_SHIFT * color1_y);
-    s->floors[0][color1] |= puyo1;
-    puyos_t puyo2 = 1ULL << (color2_x + V_SHIFT * color2_y);
-    s->floors[0][color2] |= puyo2;
-
     return 1;
 }
 
@@ -191,7 +192,7 @@ content_t choose(value_node *root) {
     if (root->num_deals != 1) {
         return 0;
     }
-    double prob = rand() / ((double) RAND_MAX);
+    double prob = drand();
     for (num_t i = 0; i < root->deals->num_choices; ++i) {
         prob -= root->deals->choices[i].probability;
         if (prob <= 0) {
@@ -271,3 +272,5 @@ content_t solve(state *s, content_t *deals, size_t num_deals, size_t depth, eval
     free_tree(root);
     return choice;
 }
+
+#include "montecarlo.c"
