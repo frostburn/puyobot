@@ -2,6 +2,7 @@
 
 #define EXPLORATION (5.55)
 #define TREE_SCORE_FACTOR (0.1)
+#define DEATH_SCORE (1e12)
 #define MAX_DEPTH (255)
 
 choice_branch* tree_policy(state *s, value_node *root) {
@@ -27,7 +28,7 @@ choice_branch* tree_policy(state *s, value_node *root) {
         }
     }
     if (!apply_deal_and_choice(s, root->deals[i].content, best_branch->content)) {
-        best_branch->destination->value -= INFINITY;
+        best_branch->destination->value -= DEATH_SCORE;
     }
     best_branch->destination->value += resolve(s) * TREE_SCORE_FACTOR;
     return best_branch;
@@ -67,14 +68,29 @@ void eval_mc(state *s, value_node *root) {
     // Root value not updated.
 }
 
-content_t greedy_choice(value_node *root) {
+content_t greedy_choice(state *s, value_node *root) {
     if (root->num_deals != 1) {
         return 0;
     }
     content_t best_action = 0;
-    float best_value = 0;
+    float best_value = -INFINITY;
     for (num_t i = 0; i < root->deals->num_choices; ++i) {
         float value = root->deals->choices[i].destination->value / (root->deals->choices[i].visits + 3);
+
+        // Disincentivise early popping
+        state *c = copy_state(s);
+        int num_puyos = 0;
+        for (int i = 0; i < NUM_FLOORS; ++i) {
+            for (int j = 0; j < NUM_COLORS; ++j) {
+                num_puyos += popcount(c->floors[i][j]);
+            }
+        }
+        apply_deal_and_choice(c, root->deals->content, root->deals->choices[i].content);
+        if (resolve(c)) {
+            value -= 7.77 / (0.15 * num_puyos + 1);
+        }
+        free(c);
+
         if (value > best_value) {
             best_value = value;
             best_action = root->deals->choices[i].content;
@@ -91,7 +107,7 @@ content_t iterate_mc(state *s, content_t *deals, size_t num_deals, size_t iterat
         eval_mc(c, root);
         free(c);
     }
-    content_t choice = greedy_choice(root);
+    content_t choice = greedy_choice(s, root);
     free_tree(root);
     return choice;
 }
