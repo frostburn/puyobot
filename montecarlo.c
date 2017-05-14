@@ -1,8 +1,8 @@
 #include "policy.c"
 
-#define EXPLORATION (5.55)
+#define EXPLORATION (5555.55)
 #define TREE_SCORE_FACTOR (0.1)
-#define DEATH_SCORE (1e12)
+#define DEATH_SCORE (1e44)
 #define MAX_DEPTH (255)
 
 choice_branch* tree_policy(state *s, value_node *root) {
@@ -30,7 +30,7 @@ choice_branch* tree_policy(state *s, value_node *root) {
     if (!apply_deal_and_choice(s, root->deals[i].content, best_branch->content)) {
         best_branch->destination->value -= DEATH_SCORE;
     }
-    best_branch->destination->value += resolve(s) * TREE_SCORE_FACTOR;
+    best_branch->destination->value += resolve(s, NULL) * TREE_SCORE_FACTOR;
     return best_branch;
 }
 
@@ -58,7 +58,7 @@ void eval_mc(state *s, value_node *root) {
             score -= 2;
             break;
         }
-        score += resolve(s);
+        score += resolve(s, NULL);
     }
 
     for (int i = 0; i < path_len; ++i) {
@@ -86,7 +86,7 @@ content_t greedy_choice(state *s, value_node *root) {
             }
         }
         apply_deal_and_choice(c, root->deals->content, root->deals->choices[i].content);
-        if (resolve(c)) {
+        if (resolve(c, NULL)) {
             value -= 7.77 / (0.15 * num_puyos + 1);
         }
         free(c);

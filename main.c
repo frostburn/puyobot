@@ -33,6 +33,7 @@
 #define GARBAGE (5)
 #define CLEAR_THRESHOLD (4)
 
+#include "scoring.c"
 
 typedef unsigned long int puyos_t;
 
@@ -231,10 +232,12 @@ int state_euler(state *s) {
     return total;
 }
 
-int clear_groups(state *s) {
+int clear_groups(state *s, int chain_number) {
     assert(NUM_FLOORS == 2);
     assert(WIDTH % 2 == 0);
     int num_cleared = 0;
+    int group_bonus = 0;
+    unsigned char color_flags = 0;
     for (int i = 0; i < NUM_COLORS - 1; ++i) {
         puyos_t top = s->floors[0][i] & LIFE_BLOCK;
         puyos_t bottom = s->floors[1][i];
@@ -265,6 +268,13 @@ int clear_groups(state *s) {
                 s->floors[1][i] ^= bottom_group;
                 num_cleared += group_size;
 
+                group_size -= CLEAR_THRESHOLD;
+                if (group_size >= MAX_GROUP_BONUS) {
+                    group_size = MAX_GROUP_BONUS - 1;
+                }
+                group_bonus += GROUP_BONUS[group_size];
+                color_flags |= 1 << i;
+
                 s->floors[0][GARBAGE] &= ~((cross(top_group) & LIFE_BLOCK) | ((bottom_group & TOP) << (V_SHIFT * (HEIGHT - 1))));
                 s->floors[1][GARBAGE] &= ~(cross(bottom_group) | ((top_group & BOTTOM) >> (V_SHIFT * (HEIGHT - 1))));
             }
@@ -278,12 +288,30 @@ int clear_groups(state *s) {
                 s->floors[1][i] ^= bottom_group;
                 num_cleared += group_size;
 
+                group_size -= CLEAR_THRESHOLD;
+                if (group_size >= MAX_GROUP_BONUS) {
+                    group_size = MAX_GROUP_BONUS - 1;
+                }
+                group_bonus += GROUP_BONUS[group_size];
+                color_flags |= 1 << i;
+
                 s->floors[0][GARBAGE] &= ~((bottom_group & TOP) << (V_SHIFT * (HEIGHT - 1)));
                 s->floors[1][GARBAGE] &= ~cross(bottom_group);
             }
         }
     }
-    return num_cleared;
+    int color_bonus = COLOR_BONUS[popcount(color_flags)];
+    if (chain_number >= MAX_CHAIN_POWER) {
+        chain_number = MAX_CHAIN_POWER - 1;
+    }
+    int chain_power = CHAIN_POWERS[chain_number];
+    int clear_bonus = chain_power + color_bonus + group_bonus;
+    if (clear_bonus < 1) {
+        clear_bonus = 1;
+    } else if (clear_bonus > MAX_CLEAR_BONUS) {
+        clear_bonus = MAX_CLEAR_BONUS;
+    }
+    return (10 * num_cleared) * clear_bonus;
 }
 
 // Reference for bit parallel "raindrop" gravity
@@ -335,21 +363,30 @@ void kill_puyos(state *s) {
     }
 }
 
-int resolve(state *s) {
+int resolve(state *s, int *chain_out) {
     int chain = -1;
-    do {
+    int total_score = 0;
+    while(1) {
         ++chain;
         handle_gravity(s);
         kill_puyos(s);
-    } while(clear_groups(s));
-    int all_clear_bonus = 2;
+        int score = clear_groups(s, chain);
+        if (!score) {
+            break;
+        }
+        total_score += score;
+    }
+    int all_clear_bonus = 8500;
     for (int i = 0; i < NUM_COLORS; ++i) {
         if (s->floors[NUM_FLOORS - 1][i]) {
             all_clear_bonus = 0;
             break;
         }
     }
-    return chain + all_clear_bonus;
+    if (chain_out) {
+        *chain_out = chain;
+    }
+    return total_score + all_clear_bonus;
 }
 
 void benchmark_resolve(unsigned long iterations) {
@@ -369,12 +406,24 @@ void benchmark_resolve(unsigned long iterations) {
                 s->floors[j][color] |= 1ULL << i;
             }
         }
-        total_chain += resolve(s);
+        total_chain += resolve(s, NULL);
     }
     printf("%lu\n", total_chain);
 }
 
 #include "tree.c"
+
+void print_deals(content_t *deals, int num_deals) {
+    printf("                   \033[A\033[A\033[A");
+    for (int i = 1; i < num_deals; ++i) {
+        content_t color1 = deals[i] & COLOR1_MASK;
+        content_t color2 = deals[i] >> COLOR2_SHIFT;
+        printf("\x1b[3%d;1m ●", color1 + 1);
+        printf("\x1b[3%d;1m ●", color2 + 1);
+        printf("  ");
+    }
+    printf("\x1b[0m\033[B\033[B\n");
+}
 
 void demo() {
     srand(time(NULL));
@@ -392,7 +441,7 @@ void demo() {
             return;
         }
         print_state(s);
-        printf("score=%d\n", resolve(s));
+        printf("score=%d\n", resolve(s, NULL));
         for (int j = 0; j < 2; ++j) {
             deals[j] = deals[j + 1];
         }
@@ -404,7 +453,7 @@ void mc_demo() {
     srand(time(NULL));
     state *s = calloc(1, sizeof(state));
     content_t deals[3];
-    int max_score = 0;
+    int max_chain = 0;
 
     for (int i = 0; i < 3; ++i) {
         deals[i] = rand_piece();
@@ -418,11 +467,13 @@ void mc_demo() {
             return;
         }
         print_state(s);
-        int score = resolve(s);
-        if (score > max_score) {
-            max_score = score;
+        print_deals(deals, 3);
+        int chain = 0;
+        int score = resolve(s, &chain);
+        if (chain > max_chain) {
+            max_chain = chain;
         }
-        printf("score=%d, max=%d\n", score, max_score);
+        printf("score=%d, max chain=%d\n", score, max_chain);
         for (int j = 0; j < 2; ++j) {
             deals[j] = deals[j + 1];
         }

@@ -105,7 +105,7 @@ void test_clear() {
     }
     print_state(s);
     print_puyos(test_group);
-    clear_groups(s);
+    clear_groups(s, 0);
     print_state(s);
     if (test_group) {
         assert(!(s->floors[1][test_color] & test_group));
@@ -124,7 +124,7 @@ void test_clear_with_shift() {
         print_state(s);
         printf("%d, %d\n", popcount(s->floors[0][0]), popcount(s->floors[1][0]));
         assert(popcount(s->floors[0][0]) + popcount(s->floors[1][0]) == 29);
-        clear_groups(s);
+        clear_groups(s, 0);
         print_state(s);
         assert(popcount(s->floors[0][0]) + popcount(s->floors[1][0]) == 12);
         free(s);
@@ -140,8 +140,10 @@ void test_ghost_chain() {
     s->floors[0][RED] |= 3ULL << (4 + V_SHIFT * (GHOST_Y + 2));
     s->floors[0][GARBAGE] &= ~s->floors[0][RED];
     print_state(s);
-    resolve(s);
+    int chain = 0;
+    resolve(s, &chain);
     print_state(s);
+    assert(chain == 2);
     assert(!s->floors[0][RED]);
 }
 

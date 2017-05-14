@@ -143,7 +143,7 @@ float evaluate(state *s, value_node *root, eval_fun f) {
             state *child = copy_state(s);
             int legal = apply_deal_and_choice(child, root->deals[j].content, root->deals[j].choices[k].content);
             if (legal) {
-                float current_value = resolve(child);
+                float current_value = resolve(child, NULL);
                 float future_value = evaluate(child, root->deals[j].choices[k].destination, f);
                 if (current_value > future_value) {
                     root->deals[j].choices[k].destination->value = current_value;
@@ -227,7 +227,7 @@ float eval_fun_random(state *s) {
             if(!apply_deal_and_choice(c, rand_piece(), CHOICES[rand() % NUM_CHOICES])) {
                 break;
             }
-            total_score += resolve(c);
+            total_score += resolve(c, NULL);
         }
         free(c);
     }
@@ -244,7 +244,7 @@ float eval_fun_weighted(state *s) {
             if(!apply_deal_and_choice(c, rand_piece(), CHOICES[rand() % NUM_CHOICES])) {
                 break;
             }
-            double score = resolve(c);
+            double score = resolve(c, NULL);
             int num_remaining = 0;
             for (int j = 0; j < NUM_FLOORS; ++j) {
                 for (int i = 0; i < NUM_COLORS; ++i) {
