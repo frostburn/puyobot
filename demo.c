@@ -48,7 +48,7 @@ void mc_demo() {
     }
 
     for (int i = 0; i < 10000; ++i) {
-        content_t choice = iterate_mc(s, deals, 3, 10000);
+        content_t choice = iterate_mc(s, deals, 3, 50000);
         if (!apply_deal_and_choice(s, deals[0], choice)) {
             print_state(s);
             printf("Game Over\n");

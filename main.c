@@ -294,7 +294,6 @@ int resolve(state *s, int *chain_out) {
 #include "test.c"
 
 int main() {
-    test_all();
     mc_demo();
     return 0;
 }
