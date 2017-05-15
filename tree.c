@@ -36,6 +36,9 @@ typedef struct choice_branch
 
 typedef float (*eval_fun)(state *s);
 
+static content_t ROTATIONS[4] = {
+    CHOICE_0, CHOICE_90, CHOICE_180, CHOICE_270,
+};
 static content_t CHOICES[NUM_CHOICES] = {
     0 | CHOICE_0, 1 | CHOICE_0, 2 | CHOICE_0, 3 | CHOICE_0, 4 | CHOICE_0, 5 | CHOICE_0,
     0 | CHOICE_90, 1 | CHOICE_90, 2 | CHOICE_90, 3 | CHOICE_90, 4 | CHOICE_90,
@@ -49,6 +52,22 @@ content_t make_piece(content_t color1, content_t color2) {
 
 content_t rand_piece() {
     return make_piece(rand() % (NUM_COLORS - 1), rand() % (NUM_COLORS - 1));
+}
+
+content_t deal_color1(content_t deal) {
+    return deal & COLOR1_MASK;
+}
+
+content_t deal_color2(content_t deal) {
+    return deal >> COLOR2_SHIFT;
+}
+
+content_t rand_choice(content_t min_x, content_t max_x) {
+    content_t rotation = ROTATIONS[rand() % 4];
+    if (max_x == 5 && (rotation == CHOICE_90 || rotation == CHOICE_270)) {
+        max_x = 4;
+    }
+    return (min_x + (rand() % (1 + max_x - min_x))) | rotation;
 }
 
 int apply_deal_and_choice(state *s, content_t deal, content_t choice) {

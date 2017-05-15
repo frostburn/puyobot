@@ -17,6 +17,9 @@
 #define RIGHT_BLOCK (0xfbefbefbefbefbeULL)
 #define RIGHT_WALL (0x820820820820820ULL)
 #define LEFT_BLOCK (0x7df7df7df7df7dfULL)
+#define LEFT_SIDE (0x1c71c71c71c71c7ULL)
+#define RIGHT_SIDE (0xe38e38e38e38e38ULL)
+
 
 #define GHOST_Y (7)
 #define DEATH_BLOCK (0x3ffffffffffULL)
@@ -47,6 +50,21 @@ state* copy_state(state *s) {
     state *c = malloc(sizeof(state));
     memcpy(c, s, sizeof(state));
     return c;
+}
+
+void clear_state(state *s) {
+    memset(s, 0, sizeof(state));
+}
+
+int state_is_clear(state *s) {
+    for (int j = 0; j < NUM_FLOORS; ++j) {
+        for (int i = 0; i < NUM_COLORS; ++i) {
+            if (s->floors[j][i]) {
+                return 0;
+            }
+        }
+    }
+    return 1;
 }
 
 void shift_down(state *s) {
@@ -185,6 +203,9 @@ int clear_groups(state *s, int chain_number) {
                 s->floors[0][GARBAGE] &= ~((cross(top_group) & LIFE_BLOCK) | ((bottom_group & TOP) << (V_SHIFT * (HEIGHT - 1))));
                 s->floors[1][GARBAGE] &= ~(cross(bottom_group) | ((top_group & BOTTOM) >> (V_SHIFT * (HEIGHT - 1))));
             }
+            if (!top) {
+                break;
+            }
         }
         for (int j = 0; j < HEIGHT * WIDTH; j += 2) {
             puyos_t bottom_group = 3ULL << j;
@@ -204,6 +225,9 @@ int clear_groups(state *s, int chain_number) {
 
                 s->floors[0][GARBAGE] &= ~((bottom_group & TOP) << (V_SHIFT * (HEIGHT - 1)));
                 s->floors[1][GARBAGE] &= ~cross(bottom_group);
+            }
+            if (!bottom) {
+                break;
             }
         }
     }
@@ -294,6 +318,6 @@ int resolve(state *s, int *chain_out) {
 #include "test.c"
 
 int main() {
-    mc_demo();
+    mc_demo(0, 5000, random_policy);
     return 0;
 }

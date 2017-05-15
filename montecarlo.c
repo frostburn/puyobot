@@ -34,7 +34,7 @@ choice_branch* tree_policy(state *s, value_node *root) {
     return best_branch;
 }
 
-void eval_mc(state *s, value_node *root, size_t num_deals) {
+void eval_mc(state *s, value_node *root, size_t num_deals, policy_fun policy) {
     choice_branch *path[MAX_DEPTH];
     int path_len = 0;
     choice_branch *leaf = NULL;
@@ -59,7 +59,7 @@ void eval_mc(state *s, value_node *root, size_t num_deals) {
         deals[i] = rand_piece();
     }
     for (int i = 0; i < 30; ++i) {
-        content_t choice = random_policy(s, deals + i, num_deals);
+        content_t choice = policy(s, deals + i, num_deals);
         if (!apply_deal_and_choice(s, deals[i], choice)) {
             score -= 2;
             break;
@@ -91,12 +91,12 @@ content_t greedy_choice(state *s, value_node *root) {
     return best_action;
 }
 
-content_t iterate_mc(state *s, content_t *deals, size_t num_deals, size_t iterations) {
+content_t iterate_mc(state *s, content_t *deals, size_t num_deals, size_t iterations, policy_fun policy) {
     value_node *root = calloc(1, sizeof(value_node));
     append_deals(root, deals, num_deals);
     for (size_t i = 0; i < iterations; ++i) {
         state *c = copy_state(s);
-        eval_mc(c, root, num_deals);
+        eval_mc(c, root, num_deals, policy);
         free(c);
     }
     content_t choice = greedy_choice(s, root);

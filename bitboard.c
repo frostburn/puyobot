@@ -92,3 +92,19 @@ puyos_t drop_once(puyos_t puyos) {
     puyos_t falling = puyos & ~bellow;
     return (falling << V_SHIFT) | (puyos & ~falling);
 }
+
+int num_groups(puyos_t puyos) {
+    int num = 0;
+    for (int j = 0; j < HEIGHT * WIDTH; j += 2) {
+        puyos_t group = 3ULL << j;
+        group = flood(group, puyos);
+        if (group) {
+            ++num;
+            puyos ^= group;
+        }
+        if (!puyos) {
+            break;
+        }
+    }
+    return num;
+}
