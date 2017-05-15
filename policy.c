@@ -1,13 +1,13 @@
-content_t random_policy(state *s, content_t deal) {
+content_t random_policy(state *s, content_t *deals, size_t num_deals) {
     return CHOICES[rand() % NUM_CHOICES];
 }
 
-content_t euler_policy(state *s, content_t deal) {
+content_t euler_policy(state *s, content_t *deals, size_t num_deals) {
     double weights[NUM_CHOICES];
     double total_weight = 0;
     for (int i = 0; i < NUM_CHOICES; ++i) {
         state *c = copy_state(s);
-        apply_deal_and_choice(c, deal, CHOICES[i]);
+        apply_deal_and_choice(c, deals[0], CHOICES[i]);
         double weight = exp(-state_euler(c));
         weights[i] = weight;
         total_weight += weight;

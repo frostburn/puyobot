@@ -109,19 +109,33 @@ void append_deals(value_node *root, content_t *deals, size_t num_deals) {
 // Probabilistic deals
 void expand(value_node *root) {
     if (root->num_deals == 0) {
-        root->num_deals = NUM_COLORS * NUM_COLORS;
+        root->num_deals = NUM_COLORS - 1 + ((NUM_COLORS - 1) * (NUM_COLORS - 2)) / 2;
         root->deals = calloc(root->num_deals, sizeof(dealt_node));
-        for (num_t i = 0; i < root->num_deals; ++i) {
-            root->deals[i].content = make_piece(i % NUM_COLORS, i / NUM_COLORS);
-            root->deals[i].probability = 1.0 / root->num_deals;
-            root->deals[i].num_choices = NUM_CHOICES;
-            root->deals[i].choices = calloc(root->deals[i].num_choices, sizeof(choice_branch));
-            for (num_t k = 0; k < root->deals[i].num_choices; ++k) {
-                root->deals[i].choices[k].content = CHOICES[k];
-                root->deals[i].choices[k].probability = 1.0 / NUM_CHOICES;
-                root->deals[i].choices[k].destination = calloc(1, sizeof(value_node));
+        num_t i = 0;
+        for (num_t j = 0; j < NUM_COLORS - 1; ++j) {
+            for (num_t k = 0; k < NUM_COLORS - 1; ++k) {
+                // Symmetry reduction
+                if (k > j) {
+                    continue;
+                }
+                root->deals[i].content = make_piece(j, k);
+                if (j == k) {
+                    root->deals[i].probability = 1.0;
+                } else {
+                    root->deals[i].probability = 2.0;
+                }
+                root->deals[i].probability /= (NUM_COLORS - 1) * (NUM_COLORS - 1);
+                root->deals[i].num_choices = NUM_CHOICES;
+                root->deals[i].choices = calloc(root->deals[i].num_choices, sizeof(choice_branch));
+                for (num_t k = 0; k < root->deals[i].num_choices; ++k) {
+                    root->deals[i].choices[k].content = CHOICES[k];
+                    root->deals[i].choices[k].probability = 1.0 / NUM_CHOICES;
+                    root->deals[i].choices[k].destination = calloc(1, sizeof(value_node));
+                }
+                ++i;
             }
         }
+        assert(i == root->num_deals);
     } else {
         for (num_t i = 0; i < root->num_deals; ++i) {
             for (num_t k = 0; k < root->deals[i].num_choices; ++k) {

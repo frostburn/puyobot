@@ -9,7 +9,7 @@ choice_branch* tree_policy(state *s, value_node *root) {
     if (!root->num_deals) {
         return NULL;
     }
-    // Assumes uniform deals
+    // Assumes uniform deals. XXX: Incorrect under symmetry reduction.
     int i = rand() % root->num_deals;
     size_t total_visits = 0;
     for (int j = 0; j < root->deals[i].num_choices; ++j) {
@@ -17,7 +17,7 @@ choice_branch* tree_policy(state *s, value_node *root) {
     }
     total_visits += 1;
     double best_value = -INFINITY;
-    choice_branch *best_branch = NULL;
+    choice_branch *best_branch = root->deals[i].choices;
     for (int j = 0; j < root->deals[i].num_choices; ++j) {
         double value = root->deals[i].choices[j].destination->value;
         double visits = root->deals[i].choices[j].visits + 1;
@@ -34,7 +34,7 @@ choice_branch* tree_policy(state *s, value_node *root) {
     return best_branch;
 }
 
-void eval_mc(state *s, value_node *root) {
+void eval_mc(state *s, value_node *root, size_t num_deals) {
     choice_branch *path[MAX_DEPTH];
     int path_len = 0;
     choice_branch *leaf = NULL;
@@ -48,13 +48,19 @@ void eval_mc(state *s, value_node *root) {
     } while (leaf);
     path_len--;
 
-    expand(path[path_len - 1]->destination);
+    leaf = path[path_len - 1];
+    if (leaf->visits > 3) {
+        expand(leaf->destination);
+    }
 
     double score = 0;
+    content_t deals[40];
+    for (int i = 0; i < 40; ++i) {
+        deals[i] = rand_piece();
+    }
     for (int i = 0; i < 30; ++i) {
-        content_t deal = rand_piece();
-        content_t choice = random_policy(s, deal);
-        if (!apply_deal_and_choice(s, deal, choice)) {
+        content_t choice = random_policy(s, deals + i, num_deals);
+        if (!apply_deal_and_choice(s, deals[i], choice)) {
             score -= 2;
             break;
         }
@@ -77,20 +83,6 @@ content_t greedy_choice(state *s, value_node *root) {
     for (num_t i = 0; i < root->deals->num_choices; ++i) {
         float value = root->deals->choices[i].destination->value / (root->deals->choices[i].visits + 3);
 
-        // Disincentivise early popping
-        state *c = copy_state(s);
-        int num_puyos = 0;
-        for (int i = 0; i < NUM_FLOORS; ++i) {
-            for (int j = 0; j < NUM_COLORS; ++j) {
-                num_puyos += popcount(c->floors[i][j]);
-            }
-        }
-        apply_deal_and_choice(c, root->deals->content, root->deals->choices[i].content);
-        if (resolve(c, NULL)) {
-            value -= 7.77 / (0.15 * num_puyos + 1);
-        }
-        free(c);
-
         if (value > best_value) {
             best_value = value;
             best_action = root->deals->choices[i].content;
@@ -104,7 +96,7 @@ content_t iterate_mc(state *s, content_t *deals, size_t num_deals, size_t iterat
     append_deals(root, deals, num_deals);
     for (size_t i = 0; i < iterations; ++i) {
         state *c = copy_state(s);
-        eval_mc(c, root);
+        eval_mc(c, root, num_deals);
         free(c);
     }
     content_t choice = greedy_choice(s, root);
