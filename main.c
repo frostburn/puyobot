@@ -4,6 +4,7 @@
 #include <string.h>
 #include <time.h>
 #include <math.h>
+#include <unistd.h>
 
 #define WIDTH (6)
 #define HEIGHT (10)
@@ -33,9 +34,9 @@
 #define GARBAGE (5)
 #define CLEAR_THRESHOLD (4)
 
+#include "util.c"
+#include "bitboard.c"
 #include "scoring.c"
-
-typedef unsigned long int puyos_t;
 
 typedef struct state
 {
@@ -46,18 +47,6 @@ state* copy_state(state *s) {
     state *c = malloc(sizeof(state));
     memcpy(c, s, sizeof(state));
     return c;
-}
-
-int popcount(puyos_t puyos) {
-    return __builtin_popcountll(puyos);
-}
-
-puyos_t lrand() {
-    return rand() | (((puyos_t) rand()) << 31) | (((puyos_t) rand()) << 62);
-}
-
-double drand() {
-    return rand() / ((double) RAND_MAX);
 }
 
 void shift_down(state *s) {
@@ -71,33 +60,6 @@ void shift_down(state *s) {
             leak = temp;
         }
     }
-}
-
-void print_puyos(puyos_t puyos) {
-    printf(" ");
-    for (int i = 0; i < WIDTH; ++i) {
-        printf(" %c", 'A' + i);
-    }
-    printf("\n");
-    for (int i = 0; i < 64; ++i) {
-        if (i % V_SHIFT == 0) {
-            int j = i / V_SHIFT;
-            if (j < 10) {
-                printf("%d", j);
-            } else {
-                printf("%c", 'a' + j - 10);
-            }
-        }
-        if ((1ULL << i) & puyos) {
-            printf(" @");
-        } else {
-            printf("  ");
-        }
-        if (i % V_SHIFT == V_SHIFT - 1){
-            printf("\n");
-        }
-    }
-    printf("\n");
 }
 
 void print_state(state *s) {
@@ -143,61 +105,6 @@ void print_state(state *s) {
             }
         }
     }
-}
-
-puyos_t cross(puyos_t puyos) {
-    return (
-        puyos |
-        ((puyos & RIGHT_BLOCK) >> H_SHIFT) |
-        ((puyos << H_SHIFT) & RIGHT_BLOCK) |
-        (puyos << V_SHIFT) |
-        (puyos >> V_SHIFT)
-    );
-}
-
-puyos_t flood(register puyos_t source, register puyos_t target) {
-    source &= target;
-    if (!source){
-        return source;
-    }
-    register puyos_t temp;
-    do {
-        temp = source;
-        source |= (
-            ((source & RIGHT_BLOCK) >> H_SHIFT) |
-            ((source << H_SHIFT) & RIGHT_BLOCK) |
-            (source << V_SHIFT) |
-            (source >> V_SHIFT)
-        ) & target;
-    } while (temp != source);
-    return source;
-}
-
-// Number of (diagonally connected) objects minus the number of holes
-int euler(puyos_t puyos) {
-    int pixels = popcount(puyos);
-
-    int edges = 0;
-    edges += popcount(puyos & LEFT_WALL);
-    edges += popcount(puyos & TOP);
-    edges += popcount(puyos | ((puyos & RIGHT_BLOCK) >> H_SHIFT));
-    edges += popcount(puyos | (puyos >> V_SHIFT));
-
-    int vertices = 0;
-    vertices += puyos & 1;
-    vertices += popcount((puyos | (puyos >> V_SHIFT)) & LEFT_WALL);
-    vertices += popcount((puyos | ((puyos & RIGHT_BLOCK) >> H_SHIFT)) & TOP);
-    vertices += popcount(
-        puyos |
-        (puyos >> V_SHIFT) |
-        ((puyos & RIGHT_BLOCK) >> H_SHIFT) |
-        ((puyos & RIGHT_BLOCK) >> (V_SHIFT + H_SHIFT))
-    );
-
-    // This is always broken so leaving the debug print here.
-    // printf("e=%d, v=%d, p=%d\n", edges, vertices, pixels);
-
-    return pixels - edges + vertices;
 }
 
 int state_euler(state *s) {
@@ -314,13 +221,6 @@ int clear_groups(state *s, int chain_number) {
     return (10 * num_cleared) * clear_bonus;
 }
 
-// Reference for bit parallel "raindrop" gravity
-puyos_t drop_once(puyos_t puyos) {
-    puyos_t bellow = (puyos >> V_SHIFT) | BOTTOM;
-    puyos_t falling = puyos & ~bellow;
-    return (falling << V_SHIFT) | (puyos & ~falling);
-}
-
 void handle_gravity(state *s) {
     assert(NUM_FLOORS == 2);
     puyos_t all[2];
@@ -389,98 +289,8 @@ int resolve(state *s, int *chain_out) {
     return total_score + all_clear_bonus;
 }
 
-void benchmark_resolve(unsigned long iterations) {
-    state *s = malloc(sizeof(state));
-    srand(time(NULL));
-
-    unsigned long total_chain = 0;
-    for (unsigned long k = 0; k < iterations; ++k) {
-        for (int j = 0; j < NUM_FLOORS; j++) {
-            for (int i = 0; i < NUM_COLORS; ++i) {
-                s->floors[j][i] = 0;
-            }
-        }
-        for (int i = 0; i < WIDTH * HEIGHT; ++i) {
-            for (int j = 0; j < NUM_FLOORS; ++j) {
-                int color = rand() % NUM_COLORS;
-                s->floors[j][color] |= 1ULL << i;
-            }
-        }
-        total_chain += resolve(s, NULL);
-    }
-    printf("%lu\n", total_chain);
-}
-
 #include "tree.c"
-
-void print_deals(content_t *deals, int num_deals) {
-    printf("                   \033[A\033[A\033[A");
-    for (int i = 1; i < num_deals; ++i) {
-        content_t color1 = deals[i] & COLOR1_MASK;
-        content_t color2 = deals[i] >> COLOR2_SHIFT;
-        printf("\x1b[3%d;1m ●", color1 + 1);
-        printf("\x1b[3%d;1m ●", color2 + 1);
-        printf("  ");
-    }
-    printf("\x1b[0m\033[B\033[B\n");
-}
-
-void demo() {
-    srand(time(NULL));
-    state *s = calloc(1, sizeof(state));
-    content_t deals[3];
-
-    for (int i = 0; i < 3; ++i) {
-        deals[i] = rand_piece();
-    }
-
-    for (int i = 0; i < 10000; ++i) {
-        content_t choice = solve(s, deals, 3, 0, &eval_fun_weighted);
-        if (!apply_deal_and_choice(s, deals[0], choice)) {
-            printf("Game Over\n");
-            return;
-        }
-        print_state(s);
-        printf("score=%d\n", resolve(s, NULL));
-        for (int j = 0; j < 2; ++j) {
-            deals[j] = deals[j + 1];
-        }
-        deals[2] = rand_piece();
-    }
-}
-
-void mc_demo() {
-    srand(time(NULL));
-    state *s = calloc(1, sizeof(state));
-    content_t deals[3];
-    int max_chain = 0;
-
-    for (int i = 0; i < 3; ++i) {
-        deals[i] = rand_piece();
-    }
-
-    for (int i = 0; i < 10000; ++i) {
-        content_t choice = iterate_mc(s, deals, 3, 2000);
-        if (!apply_deal_and_choice(s, deals[0], choice)) {
-            print_state(s);
-            printf("Game Over\n");
-            return;
-        }
-        print_state(s);
-        print_deals(deals, 3);
-        int chain = 0;
-        int score = resolve(s, &chain);
-        if (chain > max_chain) {
-            max_chain = chain;
-        }
-        printf("score=%d, max chain=%d\n", score, max_chain);
-        for (int j = 0; j < 2; ++j) {
-            deals[j] = deals[j + 1];
-        }
-        deals[2] = rand_piece();
-    }
-}
-
+#include "demo.c"
 #include "test.c"
 
 int main() {
