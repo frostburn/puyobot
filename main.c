@@ -314,10 +314,13 @@ int resolve(state *s, int *chain_out) {
 }
 
 #include "tree.c"
+#include "template.c"
 #include "demo.c"
 #include "test.c"
 
 int main() {
-    mc_demo(0, 5000, random_policy);
+    state *s = chain_of_fours(5);
+    print_state(s);
+    animate(s, print_state);
     return 0;
 }
