@@ -66,7 +66,32 @@ int resolve_bottom(state *s, int num_colors) {
     return chain;
 }
 
+int has_gap(puyos_t puyos) {
+    // Beam the puyos up to the top row.
+    puyos |= puyos >> V_SHIFT;
+    puyos |= puyos >> (2 * V_SHIFT);
+    puyos |= puyos >> (4 * V_SHIFT);
+    puyos |= puyos >> (8 * V_SHIFT);
+    // Check if there is a gap.
+    int run = 0;
+    int gap = 0;
+    for (int i = 0; i < WIDTH; ++i) {
+        puyos_t probe = 1ULL << i;
+        if (probe & puyos) {
+            run = 1;
+            if (gap) {
+                return 1;
+            }
+        } else if (run) {
+            gap = 1;
+        }
+    }
+    return 0;
+}
+
 state* chain_of_fours(int num_links) {
+    assert(WIDTH == 6);
+    assert(NUM_FLOORS == 2);
     state *s = calloc(1, sizeof(state));
     state *c = calloc(1, sizeof(state));
     int num_colors = num_links;
@@ -76,29 +101,36 @@ state* chain_of_fours(int num_links) {
 
     while (1) {
         clear_state(s);
+        puyos_t *floor = s->floors[1];
         // Insert the trigger. Always a tetrominoe.
         // Can be red without loss of generality.
         // Falls into place so doesn't always end up being the trigger.
         while (1) {
-            s->floors[1][0] = 0;
-            s->floors[1][0] |= TETROMINOES[rand() % NUM_TETROMINOES] << (
+            floor[0] = 0;
+            floor[0] |= TETROMINOES[rand() % NUM_TETROMINOES] << (
                 rand() % (WIDTH - 1) +
                 (rand() % (HEIGHT - 1)) * V_SHIFT
             );
-            if (popcount(s->floors[1][0]) == 4) {
+            if (popcount(floor[0]) == 4) {
                 break;
             }
         }
-        puyos_t allowed = FULL ^ s->floors[1][0];
+        puyos_t allowed = FULL ^ floor[0];
         for (int k = 1; k < num_colors; ++k) {
             int j = 4;
             while (j) {
                 puyos_t p = 1ULL << (rand() % (WIDTH * HEIGHT));
                 if (p & allowed) {
-                    s->floors[1][k] |= p;
+                    floor[k] |= p;
                     allowed ^= p;
                     --j;
                 }
+            }
+            if (has_gap(floor[k])) {
+                allowed ^= floor[k];
+                floor[k] = 0;
+                --k;
+                continue;
             }
         }
         int k = num_links - num_colors;
@@ -108,7 +140,7 @@ state* chain_of_fours(int num_links) {
             while (j) {
                 puyos_t p = 1ULL << (rand() % (WIDTH * HEIGHT));
                 if (p & allowed) {
-                    s->floors[1][color] |= p;
+                    floor[color] |= p;
                     allowed ^= p;
                     --j;
                 }
