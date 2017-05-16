@@ -38,7 +38,7 @@ void animate_gravity(state *s, void (*callback)(state*)) {
     } while (temp[0] != all[0] || temp[1] != all[1]);
 }
 
-void animate(state *s, void (*callback)(state*)) {
+int animate(state *s, void (*callback)(state*)) {
     int chain = -1;
     int total_score = 0;
     while(1) {
@@ -52,4 +52,5 @@ void animate(state *s, void (*callback)(state*)) {
         usleep(50 * ANIM_DELAY);
         total_score += score;
     }
+    return chain;
 }

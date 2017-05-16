@@ -319,8 +319,13 @@ int resolve(state *s, int *chain_out) {
 #include "test.c"
 
 int main() {
-    state *s = chain_of_fours(5);
-    print_state(s);
-    animate(s, print_state);
+    srand(time(NULL));
+    state *s = chain_of_fours(7);
+    while(expand_chain(s)) {
+        print_state(s);
+    }
+    int chain = animate(s, print_state);
+    printf("chain=%d\n", chain);
+
     return 0;
 }

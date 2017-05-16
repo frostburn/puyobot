@@ -41,6 +41,22 @@ puyos_t cross(puyos_t puyos) {
     );
 }
 
+puyos_t beam_up(puyos_t puyos) {
+    puyos |= puyos >> V_SHIFT;
+    puyos |= puyos >> (2 * V_SHIFT);
+    puyos |= puyos >> (4 * V_SHIFT);
+    puyos |= puyos >> (8 * V_SHIFT);
+    return puyos;
+}
+
+puyos_t beam_down(puyos_t puyos) {
+    puyos |= puyos << V_SHIFT;
+    puyos |= puyos << (2 * V_SHIFT);
+    puyos |= puyos << (4 * V_SHIFT);
+    puyos |= puyos << (8 * V_SHIFT);
+    return puyos & FULL;
+}
+
 puyos_t flood(register puyos_t source, register puyos_t target) {
     source &= target;
     if (!source){
@@ -107,4 +123,19 @@ int num_groups(puyos_t puyos) {
         }
     }
     return num;
+}
+
+/* Arrange the N elements of ARRAY in random order.
+   Only effective if N is much smaller than RAND_MAX;
+   if this may not be the case, use a better random
+   number generator. */
+void shuffle(puyos_t *array, size_t n) {
+    if (n > 1) {
+        for (size_t i = 0; i < n - 1; ++i) {
+          size_t j = i + rand() / (RAND_MAX / (n - i) + 1);
+          puyos_t t = array[j];
+          array[j] = array[i];
+          array[i] = t;
+        }
+    }
 }
