@@ -1,3 +1,15 @@
+#define NUM_TETROMINOES (19)
+
+puyos_t TETROMINOES[NUM_TETROMINOES] = {
+    195,  // O
+    387, 4290,  // Z
+    198, 8385,  // S
+    15, 266305,  // I
+    71, 452, 12353, 8323,  // L
+    135, 450, 4289, 8386, // T
+    263, 449, 4163, 12418,  // J
+};
+
 void handle_bottom_gravity(state *s, int num_colors) {
     puyos_t all;
     all = 0;
@@ -55,7 +67,6 @@ int resolve_bottom(state *s, int num_colors) {
 }
 
 state* chain_of_fours(int num_links) {
-    srand(time(NULL));
     state *s = calloc(1, sizeof(state));
     state *c = calloc(1, sizeof(state));
     int num_colors = num_links;
@@ -65,17 +76,44 @@ state* chain_of_fours(int num_links) {
 
     while (1) {
         clear_state(s);
-        puyos_t allowed = FULL;
-        for (int i = 0; i < num_links; ++i) {
+        // Insert the trigger. Always a tetrominoe.
+        // Can be red without loss of generality.
+        // Falls into place so doesn't always end up being the trigger.
+        while (1) {
+            s->floors[1][0] = 0;
+            s->floors[1][0] |= TETROMINOES[rand() % NUM_TETROMINOES] << (
+                rand() % (WIDTH - 1) +
+                (rand() % (HEIGHT - 1)) * V_SHIFT
+            );
+            if (popcount(s->floors[1][0]) == 4) {
+                break;
+            }
+        }
+        puyos_t allowed = FULL ^ s->floors[1][0];
+        for (int k = 1; k < num_colors; ++k) {
             int j = 4;
             while (j) {
                 puyos_t p = 1ULL << (rand() % (WIDTH * HEIGHT));
                 if (p & allowed) {
-                    s->floors[1][i % (NUM_COLORS - 1)] |= p;
+                    s->floors[1][k] |= p;
                     allowed ^= p;
                     --j;
                 }
             }
+        }
+        int k = num_links - num_colors;
+        while (k) {
+            int color = rand() % (NUM_COLORS - 1);
+            int j = 4;
+            while (j) {
+                puyos_t p = 1ULL << (rand() % (WIDTH * HEIGHT));
+                if (p & allowed) {
+                    s->floors[1][color] |= p;
+                    allowed ^= p;
+                    --j;
+                }
+            }
+            k--;
         }
         memcpy(c, s, sizeof(state));
         int chain = resolve_bottom(c, num_colors);
