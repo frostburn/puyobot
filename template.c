@@ -160,8 +160,9 @@ state* chain_of_fours(int num_links) {
     return s;
 }
 
-// TODO: Allow expansions to the second floor.
 int expand_chain(state *s) {
+    assert(NUM_FLOORS == 2);
+    assert(NUM_COLORS == 6);
     if (state_is_clear(s)) {
         int i = rand() % NUM_TETROMINOES;
         s->floors[1][0] = TETROMINOES[i] << (rand() % (WIDTH - TETROMINO_DIMS[i][0]));
@@ -170,61 +171,75 @@ int expand_chain(state *s) {
     }
 
     state *c = copy_state(s);
-    clear_bottom_groups(c, NUM_COLORS - 1);
-    puyos_t trigger = 0;
+    clear_groups(c, 0);
+    puyos_t trigger[2] = {0, 0};
     for (int i = 0; i < NUM_COLORS - 1; ++i) {
-        if (s->floors[1][i] != c->floors[1][i]) {
-            trigger = s->floors[1][i] ^ c->floors[1][i];
-            break;
+        for (int j = 0; j < NUM_FLOORS; ++j) {
+            trigger[j] |= s->floors[j][i] ^ c->floors[j][i];
         }
     }
-    if (!trigger) {
+    if (!(trigger[0] || trigger[1])) {
         free(c);
         return 0;
     }
     memcpy(c, s, sizeof(state));
-    int chain = resolve_bottom(c, NUM_COLORS - 1);
-    trigger = beam_down(trigger);
+    int chain;
+    resolve(c, &chain);
+    beam_down_2(trigger);
 
-    static puyos_t _tetrominoes[725];
+    static puyos_t _tetrominoes[2 * 897];
     static int n;
     if (!_tetrominoes[0]) {
         n = 0;
         for (int i = 0; i < NUM_TETROMINOES; ++i) {
             for (int j = 0; j <= WIDTH - TETROMINO_DIMS[i][0]; ++j) {
-                for (int k = 0; k <= HEIGHT - TETROMINO_DIMS[i][1]; ++k) {
-                    _tetrominoes[n++] = TETROMINOES[i] << (j + k * V_SHIFT);
+                for (int k = 0; k <= LIFE_HEIGHT - TETROMINO_DIMS[i][1]; ++k) {
+                    _tetrominoes[2*n] = TETROMINOES[i];
+                    _tetrominoes[2*n + 1] = 0;
+                    translate_2(_tetrominoes + 2*n, j, k + GHOST_Y);
+                    ++n;
+
                 }
             }
         }
     }
-    puyos_t *tetrominoes = malloc(n * sizeof(puyos_t));
-    memcpy(tetrominoes, _tetrominoes, n * sizeof(puyos_t));
-    shuffle(tetrominoes, n);
+    puyos_t *tetrominoes = malloc(2*n * sizeof(puyos_t));
+    memcpy(tetrominoes, _tetrominoes, 2*n * sizeof(puyos_t));
+    shuffle_2(tetrominoes, n);
+    puyos_t colors[NUM_COLORS - 1] = {RED, GREEN, YELLOW, BLUE, PURPLE};
+    shuffle(colors, NUM_COLORS - 1);
 
     state *cc = malloc(sizeof(state));
     for (int i = 0; i < n; ++i) {
-        if (tetrominoes[i] & trigger) {
-            puyos_t tetromino = tetrominoes[i];
-            puyos_t lifter = tetromino;
+        if ((tetrominoes[2*i] & trigger[0]) || (tetrominoes[2*i + 1] & trigger[1])) {
+            puyos_t tetromino[2] = {tetrominoes[2*i], tetrominoes[2*i + 1]};
+            puyos_t lifter[2] = {tetromino[0], tetromino[1]};
             memcpy(c, s, sizeof(state));
-            while (lifter) {
-                puyos_t lift = beam_up(tetromino);
+            while (lifter[0] || lifter[1]) {
+                puyos_t lift[2] = {lifter[0], lifter[1]};
+                beam_up_2(lift);
                 for (int j = 0; j < NUM_COLORS; ++j) {
-                    puyos_t p = c->floors[1][j];
-                    c->floors[1][j] = (p & ~lift) | ((p & lift) >> V_SHIFT);
+                    puyos_t p[2] = {c->floors[0][j], c->floors[1][j]};
+                    c->floors[0][j] = (p[0] & ~lift[0]) | ((p[1] & TOP & lift[1]) << TOP_TO_BOTTOM) | ((p[0] & lift[0]) >> V_SHIFT);
+                    c->floors[1][j] = (p[1] & ~lift[1]) | ((p[1] & lift[1]) >> V_SHIFT);
                 }
-                lifter &= lifter >> V_SHIFT;
+                lifter[0] &= (lifter[0] >> V_SHIFT) | ((lifter[1] & TOP) << TOP_TO_BOTTOM);
+                lifter[1] &= lifter[1] >> V_SHIFT;
             }
-            for (int j = 0; j < NUM_COLORS - 1; ++j) {
+            for (int k = 0; k < NUM_COLORS - 1; ++k) {
+                int j = colors[k];
                 memcpy(cc, c, sizeof(state));
-                cc->floors[1][j] |= tetromino;
-                int new_chain = resolve_bottom(cc, NUM_COLORS - 1);
+                cc->floors[0][j] |= tetromino[0];
+                cc->floors[1][j] |= tetromino[1];
+                int new_chain;
+                resolve(cc, &new_chain);
                 if (new_chain > chain) {
-                    c->floors[1][j] |= tetromino;
+                    c->floors[0][j] |= tetromino[0];
+                    c->floors[1][j] |= tetromino[1];
                     memcpy(s, c, sizeof(state));
-                    handle_bottom_gravity(s, NUM_COLORS - 1);
+                    handle_gravity(s);
                     free(c);
+                    free(tetrominoes);
                     free(cc);
                     return 1;
                 }
@@ -233,6 +248,7 @@ int expand_chain(state *s) {
         }
     }
     free(c);
+    free(tetrominoes);
     free(cc);
     return 0;
 }

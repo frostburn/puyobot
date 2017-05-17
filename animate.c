@@ -23,12 +23,12 @@ void animate_gravity(state *s, void (*callback)(state*)) {
             all[1] |= s->floors[1][i];
         }
 
-        bellow = (all[0] >> V_SHIFT) | ((all[1] & TOP) << (V_SHIFT * (HEIGHT - 1)));
+        bellow = (all[0] >> V_SHIFT) | ((all[1] & TOP) << TOP_TO_BOTTOM);
         all[0] = 0;
         for (int i = 0; i < NUM_COLORS; ++i) {
             falling = s->floors[0][i] & ~bellow;
 
-            s->floors[1][i] |= (falling & BOTTOM) >> (V_SHIFT * (HEIGHT - 1));
+            s->floors[1][i] |= (falling & BOTTOM) >> TOP_TO_BOTTOM;
 
             s->floors[0][i] = (falling << V_SHIFT) | (s->floors[0][i] & ~falling);
             all[0] |= s->floors[0][i];

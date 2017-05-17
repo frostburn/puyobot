@@ -19,12 +19,13 @@
 #define LEFT_BLOCK (0x7df7df7df7df7dfULL)
 #define LEFT_SIDE (0x1c71c71c71c71c7ULL)
 #define RIGHT_SIDE (0xe38e38e38e38e38ULL)
-
+#define TOP_TO_BOTTOM (V_SHIFT * (HEIGHT - 1))
 
 #define GHOST_Y (7)
 #define DEATH_BLOCK (0x3ffffffffffULL)
 #define GHOST_LINE (0xfc0000000000ULL)
 #define LIFE_BLOCK (0xfff000000000000ULL)
+#define LIFE_HEIGHT (12)
 
 #define NUM_FLOORS (2)
 #define TOTAL_HEIGHT (20)
@@ -73,7 +74,7 @@ void shift_down(state *s) {
         for (int i = 0; i < NUM_FLOORS; ++i) {
             puyos_t temp = s->floors[i][j] & BOTTOM;
             s->floors[i][j] <<= V_SHIFT;
-            s->floors[i][j] |= leak >> (V_SHIFT * (HEIGHT - 1));
+            s->floors[i][j] |= leak >> TOP_TO_BOTTOM;
             s->floors[i][j] &= FULL;
             leak = temp;
         }
@@ -134,8 +135,8 @@ int state_euler(state *s) {
         for (int i = 0; i < NUM_FLOORS; ++i) {
             total += euler(s->floors[i][j]);
 
-            bottom_edges >>= (V_SHIFT * (HEIGHT - 1));
-            bottom_vertices >>= (V_SHIFT * (HEIGHT - 1));
+            bottom_edges >>= TOP_TO_BOTTOM;
+            bottom_vertices >>= TOP_TO_BOTTOM;
 
             puyos_t temp = s->floors[i][j] & TOP;
             int edges = popcount(temp & bottom_edges);
@@ -175,11 +176,11 @@ int clear_groups(state *s, int chain_number) {
             top_group = flood(top_group, top);
             top ^= top_group;
             if (top_group & BOTTOM) {
-                bottom_group = (top_group & BOTTOM) >> (V_SHIFT * (HEIGHT - 1));
+                bottom_group = (top_group & BOTTOM) >> TOP_TO_BOTTOM;
                 bottom_group = flood(bottom_group, bottom);
                 bottom ^= bottom_group;
                 if (bottom_group & TOP) {
-                    top_extra = (bottom_group & TOP) << (V_SHIFT * (HEIGHT - 1));
+                    top_extra = (bottom_group & TOP) << TOP_TO_BOTTOM;
                     top_extra = flood(top_extra, top);
                     top ^= top_extra;
                     top_group |= top_extra;
@@ -200,8 +201,8 @@ int clear_groups(state *s, int chain_number) {
                 group_bonus += GROUP_BONUS[group_size];
                 color_flags |= 1 << i;
 
-                s->floors[0][GARBAGE] &= ~((cross(top_group) & LIFE_BLOCK) | ((bottom_group & TOP) << (V_SHIFT * (HEIGHT - 1))));
-                s->floors[1][GARBAGE] &= ~(cross(bottom_group) | ((top_group & BOTTOM) >> (V_SHIFT * (HEIGHT - 1))));
+                s->floors[0][GARBAGE] &= ~((cross(top_group) & LIFE_BLOCK) | ((bottom_group & TOP) << TOP_TO_BOTTOM));
+                s->floors[1][GARBAGE] &= ~(cross(bottom_group) | ((top_group & BOTTOM) >> TOP_TO_BOTTOM));
             }
             if (!top) {
                 break;
@@ -223,7 +224,7 @@ int clear_groups(state *s, int chain_number) {
                 group_bonus += GROUP_BONUS[group_size];
                 color_flags |= 1 << i;
 
-                s->floors[0][GARBAGE] &= ~((bottom_group & TOP) << (V_SHIFT * (HEIGHT - 1)));
+                s->floors[0][GARBAGE] &= ~((bottom_group & TOP) << TOP_TO_BOTTOM);
                 s->floors[1][GARBAGE] &= ~cross(bottom_group);
             }
             if (!bottom) {
@@ -268,12 +269,12 @@ void handle_gravity(state *s) {
             all[1] |= s->floors[1][i];
         }
 
-        bellow = (all[0] >> V_SHIFT) | ((all[1] & TOP) << (V_SHIFT * (HEIGHT - 1)));
+        bellow = (all[0] >> V_SHIFT) | ((all[1] & TOP) << TOP_TO_BOTTOM);
         all[0] = 0;
         for (int i = 0; i < NUM_COLORS; ++i) {
             falling = s->floors[0][i] & ~bellow;
 
-            s->floors[1][i] |= (falling & BOTTOM) >> (V_SHIFT * (HEIGHT - 1));
+            s->floors[1][i] |= (falling & BOTTOM) >> TOP_TO_BOTTOM;
 
             s->floors[0][i] = (falling << V_SHIFT) | (s->floors[0][i] & ~falling);
             all[0] |= s->floors[0][i];
@@ -313,6 +314,20 @@ int resolve(state *s, int *chain_out) {
     return total_score + all_clear_bonus;
 }
 
+void assert_sanity(state *s) {
+    for (int j = 0; j < NUM_FLOORS; ++j) {
+        for (int i = 0; i < NUM_COLORS; ++i) {
+            assert(!(s->floors[j][i] & ~FULL));
+            for (int k = 0; k < NUM_COLORS; ++k) {
+                if (k == i) {
+                    continue;
+                }
+                assert(!(s->floors[j][i] & s->floors[j][k]));
+            }
+        }
+    }
+}
+
 #include "tree.c"
 #include "template.c"
 #include "demo.c"
@@ -320,12 +335,24 @@ int resolve(state *s, int *chain_out) {
 
 int main() {
     srand(time(NULL));
-    state *s = chain_of_fours(7);
-    while(expand_chain(s)) {
+    state *c = malloc(sizeof(state));
+    while (1) {
+        state *s = chain_of_fours(6);
         print_state(s);
+        while(expand_chain(s)) {
+            print_state(s);
+        }
+        memcpy(c, s, sizeof(state));
+        int chain;
+        resolve(s, &chain);
+        free(s);
+        if (chain == 19) {
+            break;
+        }
     }
-    int chain = animate(s, print_state);
-    printf("chain=%d\n", chain);
 
+    int chain = animate(c, print_state);
+    printf("chain=%d\n", chain);
+    free(c);
     return 0;
 }

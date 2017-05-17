@@ -27,6 +27,34 @@ void print_puyos(puyos_t puyos) {
     printf("\n");
 }
 
+void print_puyos_2(puyos_t *puyos) {
+    printf(" ");
+    for (int i = 0; i < WIDTH; ++i) {
+        printf(" %c", 'A' + i);
+    }
+    printf("\n");
+    for (int k = 0; k < 2; ++k) {
+        for (int i = 0; i < WIDTH * HEIGHT; ++i) {
+            if (i % V_SHIFT == 0) {
+                int j = i / V_SHIFT + k * HEIGHT;
+                if (j < 10) {
+                    printf("%d", j);
+                } else {
+                    printf("%c", 'a' + j - 10);
+                }
+            }
+            if ((1ULL << i) & puyos[k]) {
+                printf(" @");
+            } else {
+                printf("  ");
+            }
+            if (i % V_SHIFT == V_SHIFT - 1){
+                printf("\n");
+            }
+        }
+    }
+}
+
 int popcount(puyos_t puyos) {
     return __builtin_popcountll(puyos);
 }
@@ -55,6 +83,46 @@ puyos_t beam_down(puyos_t puyos) {
     puyos |= puyos << (4 * V_SHIFT);
     puyos |= puyos << (8 * V_SHIFT);
     return puyos & FULL;
+}
+
+void beam_up_2(puyos_t *puyos) {
+    puyos[1] |= puyos[1] >> V_SHIFT;
+    puyos[1] |= puyos[1] >> (2 * V_SHIFT);
+    puyos[1] |= puyos[1] >> (4 * V_SHIFT);
+    puyos[1] |= puyos[1] >> (8 * V_SHIFT);
+    puyos[0] |= (puyos[1] & TOP) << TOP_TO_BOTTOM;
+    puyos[0] |= puyos[0] >> V_SHIFT;
+    puyos[0] |= puyos[0] >> (2 * V_SHIFT);
+    puyos[0] |= puyos[0] >> (4 * V_SHIFT);
+    puyos[0] |= puyos[0] >> (8 * V_SHIFT);
+}
+
+void beam_down_2(puyos_t *puyos) {
+    puyos[0] |= puyos[0] << V_SHIFT;
+    puyos[0] |= puyos[0] << (2 * V_SHIFT);
+    puyos[0] |= puyos[0] << (4 * V_SHIFT);
+    puyos[0] |= puyos[0] << (8 * V_SHIFT);
+    puyos[1] |= (puyos[0] & BOTTOM) >> TOP_TO_BOTTOM;
+    puyos[1] |= puyos[1] << V_SHIFT;
+    puyos[1] |= puyos[1] << (2 * V_SHIFT);
+    puyos[1] |= puyos[1] << (4 * V_SHIFT);
+    puyos[1] |= puyos[1] << (8 * V_SHIFT);
+}
+
+// Positive direction only and no clips here. So be safe.
+void translate_2(puyos_t *puyos, int x, int y) {
+    if (y < HEIGHT) {
+        puyos[0] <<= x;
+        puyos[1] <<= x;
+        puyos[1] <<= y * V_SHIFT;
+        puyos[1] |= puyos[0] >> (V_SHIFT * (HEIGHT - y));
+        puyos[0] <<= y * V_SHIFT;
+    } else {
+        puyos[1] = puyos[0] << (x + V_SHIFT * (y - HEIGHT));
+        puyos[0] = 0;
+    }
+    puyos[0] &= FULL;
+    puyos[1] &= FULL;
 }
 
 puyos_t flood(register puyos_t source, register puyos_t target) {
@@ -136,6 +204,20 @@ void shuffle(puyos_t *array, size_t n) {
           puyos_t t = array[j];
           array[j] = array[i];
           array[i] = t;
+        }
+    }
+}
+
+void shuffle_2(puyos_t *array, size_t n) {
+    if (n > 1) {
+        for (size_t i = 0; i < n - 1; ++i) {
+          size_t j = i + rand() / (RAND_MAX / (n - i) + 1);
+          puyos_t t0 = array[2*j];
+          puyos_t t1 = array[2*j + 1];
+          array[2*j] = array[2*i];
+          array[2*i] = t0;
+          array[2*j + 1] = array[2*i + 1];
+          array[2*i + 1] = t1;
         }
     }
 }
