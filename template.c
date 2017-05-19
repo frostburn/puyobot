@@ -291,6 +291,43 @@ int expand_chain(state *s) {
 }
 
 // TODO: Second floor
+template_result _chainify_cleanup(state *s, puyos_t shots, template_result result) {
+    assert(shots);
+    state *c = malloc(sizeof(state));
+    for (int j = 0; j < WIDTH * HEIGHT; ++j) {
+        puyos_t p = 1ULL << j;
+        if (!(p & shots)) {
+            continue;
+        }
+        memcpy(c, s, sizeof(state));
+        for (int i = 0; i < NUM_COLORS; ++i) {
+            c->floors[1][i] &= ~p;
+        }
+        int chain;
+        resolve(c, &chain);
+        if (chain >= result.chain) {
+            result.chain = chain;
+            for (int i = 0; i < NUM_COLORS; ++i) {
+                s->floors[1][i] &= ~p;
+            }
+            --result.extra_shots;
+        }
+    }
+
+    memcpy(c, s, sizeof(state));
+    result.score = resolve(c, NULL);
+    result.puyos_remaining = 0;
+    for (int i = 0; i < NUM_COLORS; ++i) {
+        int count = 0;
+        for (int j = 0; j < NUM_FLOORS; ++j) {
+            count += popcount(c->floors[j][i]);
+        }
+        result.puyos_remaining += count;
+    }
+    free(c);
+    return result;
+}
+
 template_result chainify(state *s, size_t shot_patience, size_t chain_patience) {
     template_result result;
     puyos_t all[NUM_FLOORS] = {
@@ -309,8 +346,8 @@ template_result chainify(state *s, size_t shot_patience, size_t chain_patience) 
             all[j] |= s->floors[j][i];
         }
         int chain = ceil_div(popcounts[i], CLEAR_THRESHOLD);
-        target_chain += chain;
-        if (popcounts[i]) {
+        if (popcounts[i] > 1) {
+            target_chain += chain;
             shotcounts[i] = chain * CLEAR_THRESHOLD - popcounts[i];
             result.target_shots += shotcounts[i];
         } else {
@@ -321,10 +358,11 @@ template_result chainify(state *s, size_t shot_patience, size_t chain_patience) 
 
     state *c = malloc(sizeof(state));
     state *cc = malloc(sizeof(state));
-    size_t iteration = 0;
+    size_t iteration = 1;
     while (1) {
         memcpy(c, s, sizeof(state));
         puyos_t allowed = FULL & ~all[1];
+        puyos_t shots = 0;
         for (int k = 0; k < NUM_COLORS - 1; ++k) {
             int j = shotcounts[k];
             while (j) {
@@ -332,6 +370,7 @@ template_result chainify(state *s, size_t shot_patience, size_t chain_patience) 
                 if (p & allowed) {
                     c->floors[1][k] |= p;
                     allowed ^= p;
+                    shots |= p;
                     --j;
                 }
             }
@@ -341,16 +380,11 @@ template_result chainify(state *s, size_t shot_patience, size_t chain_patience) 
         int score = resolve(cc, &chain);
         if (chain >= target_chain) {
             memcpy(s, c, sizeof(state));
-            handle_gravity(s);
             result.chain = chain;
             result.score = score;
-            result.puyos_remaining = 0;
-            for (int j = 0; j < NUM_FLOORS; ++j) {
-                for (int i = 0; i < NUM_COLORS; ++i) {
-                    result.puyos_remaining += popcount(cc->floors[j][i]);
-                }
-            }
             result.iterations = iteration;
+            result = _chainify_cleanup(s, shots, result);
+            handle_gravity(s);
             break;
         }
         if ((iteration + 1) % shot_patience == 0) {
