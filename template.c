@@ -1,4 +1,6 @@
 #define NUM_TETROMINOES (19)
+#define SHOT_PATIENCE (10000)
+#define CHAIN_PATIENCE (1000000)
 
 puyos_t TETROMINOES[NUM_TETROMINOES] = {
     195,  // O
@@ -119,7 +121,7 @@ state* chain_of_fours(int num_links) {
         );
         puyos_t allowed = FULL ^ floor[0];
         for (int k = 1; k < num_colors; ++k) {
-            int j = 4;
+            int j = CLEAR_THRESHOLD;
             while (j) {
                 puyos_t p = 1ULL << (rand() % (WIDTH * HEIGHT));
                 if (p & allowed) {
@@ -138,7 +140,7 @@ state* chain_of_fours(int num_links) {
         int k = num_links - num_colors;
         while (k) {
             int color = rand() % (NUM_COLORS - 1);
-            int j = 4;
+            int j = CLEAR_THRESHOLD;
             while (j) {
                 puyos_t p = 1ULL << (rand() % (WIDTH * HEIGHT));
                 if (p & allowed) {
@@ -249,6 +251,70 @@ int expand_chain(state *s) {
     }
     free(c);
     free(tetrominoes);
+    free(cc);
+    return 0;
+}
+
+// TODO: Second floor
+int chainify(state *s) {
+    puyos_t all[NUM_FLOORS] = {0, 0};
+    int popcounts[NUM_COLORS - 1];
+    int shotcounts[NUM_COLORS - 1];
+    int target_chain = 0;
+    for (int i = 0; i < NUM_COLORS - 1; ++i) {
+        popcounts[i] = 0;
+        for (int j = 0; j < NUM_FLOORS; ++j) {
+            popcounts[i] += popcount(s->floors[j][i]);
+            all[j] |= s->floors[j][i];
+        }
+        target_chain += ceil_div(popcounts[i], CLEAR_THRESHOLD);
+        if (popcounts[i]) {
+            shotcounts[i] = (CLEAR_THRESHOLD - popcounts[i] % 4);
+            if (shotcounts[i] == 4) {
+                ++target_chain;
+            }
+        } else {
+            shotcounts[i] = 0;
+        }
+    }
+    all[0] |= s->floors[0][NUM_COLORS - 1];
+    all[1] |= s->floors[1][NUM_COLORS - 1];
+
+    state *c = malloc(sizeof(state));
+    state *cc = malloc(sizeof(state));
+    while (1) {
+        memcpy(c, s, sizeof(state));
+        puyos_t allowed = FULL & ~all[1];
+        for (int k = 0; k < NUM_COLORS - 1; ++k) {
+            int j = shotcounts[k];
+            while (j) {
+                puyos_t p = 1ULL << (rand() % (WIDTH * HEIGHT));
+                if (p & allowed) {
+                    c->floors[1][k] |= p;
+                    allowed ^= p;
+                    --j;
+                }
+            }
+        }
+        memcpy(cc, c, sizeof(state));
+        int chain;
+        resolve(cc, &chain);
+        if (chain >= target_chain) {
+            memcpy(s, c, sizeof(state));
+            handle_gravity(s);
+            break;
+        }
+        if (rand() % SHOT_PATIENCE == 0) {
+            int j = rand() % (NUM_COLORS - 1);
+            if (shotcounts[j]) {
+                shotcounts[j]++;
+            }
+        }
+        if (rand() % CHAIN_PATIENCE == 0) {
+            --target_chain;
+        }
+    }
+    free(c);
     free(cc);
     return 0;
 }

@@ -334,25 +334,26 @@ void assert_sanity(state *s) {
 #include "test.c"
 
 int main() {
-    srand(time(NULL));
-    state *c = malloc(sizeof(state));
-    while (1) {
-        state *s = chain_of_fours(6);
-        print_state(s);
-        while(expand_chain(s)) {
-            print_state(s);
-        }
-        memcpy(c, s, sizeof(state));
-        int chain;
-        resolve(s, &chain);
-        free(s);
-        if (chain == 19) {
-            break;
+    int t = time(NULL);
+    printf("seed=%d\n", t);
+    srand(t);
+
+    state *s = calloc(1, sizeof(state));
+
+    puyos_t allowed = FULL;
+    for (int i = 0; i < 6; ++i) {
+        for (int j = 0; j < 1 + rand() % 5; ++j) {
+            puyos_t p = 1ULL << (rand() % (WIDTH * HEIGHT));
+            if (p & allowed) {
+                s->floors[1][i] |= p;
+                allowed ^= p;
+            }
         }
     }
-
-    int chain = animate(c, print_state);
-    printf("chain=%d\n", chain);
-    free(c);
-    return 0;
+    handle_gravity(s);
+    assert_sanity(s);
+    print_state(s);
+    chainify(s);
+    print_state(s);
+    animate(s, print_state);
 }
