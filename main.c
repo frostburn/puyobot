@@ -334,26 +334,29 @@ void assert_sanity(state *s) {
 #include "test.c"
 
 int main() {
-    int t = time(NULL);
-    printf("seed=%d\n", t);
-    srand(t);
+    int seed = time(NULL);
+    printf("seed=%d\n", seed);
+    srand(seed);
 
-    state *s = calloc(1, sizeof(state));
-
-    puyos_t allowed = FULL;
-    for (int i = 0; i < 6; ++i) {
-        for (int j = 0; j < 1 + rand() % 5; ++j) {
-            puyos_t p = 1ULL << (rand() % (WIDTH * HEIGHT));
-            if (p & allowed) {
-                s->floors[1][i] |= p;
-                allowed ^= p;
-            }
+    state *s = chain_of_fours(4);
+    while (1) {
+        puyos_t trigger[2];
+        int color = find_trigger(s, trigger);
+        if (!color) {
+            break;
         }
+        color = scan(color);
+
+        while (popcount(s->floors[1][color]) >= CLEAR_THRESHOLD) {
+            s->floors[1][color] &= ~lrand();
+        }
+        handle_gravity(s);
     }
-    handle_gravity(s);
+    print_state(s);
+    assert_sanity(s);
+    template_result r = chainify(s, 2 * SHOT_PATIENCE, CHAIN_PATIENCE);
+    print_template_result(r);
     assert_sanity(s);
     print_state(s);
-    chainify(s);
-    print_state(s);
-    animate(s, print_state);
+    animate(s, redraw_state);
 }

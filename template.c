@@ -1,6 +1,6 @@
 #define NUM_TETROMINOES (19)
-#define SHOT_PATIENCE (10000)
-#define CHAIN_PATIENCE (1000000)
+#define SHOT_PATIENCE (100000)
+#define CHAIN_PATIENCE (91504007)
 
 puyos_t TETROMINOES[NUM_TETROMINOES] = {
     195,  // O
@@ -21,6 +21,31 @@ int TETROMINO_DIMS[NUM_TETROMINOES][2] = {
     {3, 2}, {3, 2}, {2, 3}, {2, 3},
     {3, 2}, {3, 2}, {2, 3}, {2, 3},
 };
+
+typedef struct template_result
+{
+    int target_shots;
+    int target_chain;
+    int extra_shots;
+    int chain;
+    int score;
+    int puyos_remaining;
+    size_t iterations;
+} template_result;
+
+
+void print_template_result(template_result result) {
+    printf(
+        "target shots=%d\ntarget chain=%d\nextra shots=%d\nchain=%d\nscore=%d\npuyos remaining=%d\niterations=%zu\n",
+        result.target_shots,
+        result.target_chain,
+        result.extra_shots,
+        result.chain,
+        result.score,
+        result.puyos_remaining,
+        result.iterations
+    );
+}
 
 void handle_bottom_gravity(state *s, int num_colors) {
     puyos_t all;
@@ -162,6 +187,24 @@ state* chain_of_fours(int num_links) {
     return s;
 }
 
+unsigned char find_trigger(state *s, puyos_t *out) {
+    unsigned char color_flags = 0;
+    out[0] = 0;
+    out[1] = 0;
+    state *c = copy_state(s);
+    clear_groups(c, 0);
+    for (int i = 0; i < NUM_COLORS - 1; ++i) {
+        for (int j = 0; j < NUM_FLOORS; ++j) {
+            out[j] |= s->floors[j][i] ^ c->floors[j][i];
+            if (out[j]) {
+                color_flags |= 1 << i;
+            }
+        }
+    }
+    free(c);
+    return color_flags;
+}
+
 int expand_chain(state *s) {
     assert(NUM_FLOORS == 2);
     assert(NUM_COLORS == 6);
@@ -172,19 +215,11 @@ int expand_chain(state *s) {
         return 1;
     }
 
-    state *c = copy_state(s);
-    clear_groups(c, 0);
-    puyos_t trigger[2] = {0, 0};
-    for (int i = 0; i < NUM_COLORS - 1; ++i) {
-        for (int j = 0; j < NUM_FLOORS; ++j) {
-            trigger[j] |= s->floors[j][i] ^ c->floors[j][i];
-        }
-    }
-    if (!(trigger[0] || trigger[1])) {
-        free(c);
+    puyos_t trigger[2];
+    if (!find_trigger(s, trigger)) {
         return 0;
     }
-    memcpy(c, s, sizeof(state));
+    state *c = copy_state(s);
     int chain;
     resolve(c, &chain);
     beam_down_2(trigger);
@@ -256,32 +291,37 @@ int expand_chain(state *s) {
 }
 
 // TODO: Second floor
-int chainify(state *s) {
-    puyos_t all[NUM_FLOORS] = {0, 0};
+template_result chainify(state *s, size_t shot_patience, size_t chain_patience) {
+    template_result result;
+    puyos_t all[NUM_FLOORS] = {
+        s->floors[0][NUM_COLORS - 1],
+        s->floors[1][NUM_COLORS - 1],
+    };
     int popcounts[NUM_COLORS - 1];
     int shotcounts[NUM_COLORS - 1];
     int target_chain = 0;
+    result.target_shots = 0;
+    result.extra_shots = 0;
     for (int i = 0; i < NUM_COLORS - 1; ++i) {
         popcounts[i] = 0;
         for (int j = 0; j < NUM_FLOORS; ++j) {
             popcounts[i] += popcount(s->floors[j][i]);
             all[j] |= s->floors[j][i];
         }
-        target_chain += ceil_div(popcounts[i], CLEAR_THRESHOLD);
+        int chain = ceil_div(popcounts[i], CLEAR_THRESHOLD);
+        target_chain += chain;
         if (popcounts[i]) {
-            shotcounts[i] = (CLEAR_THRESHOLD - popcounts[i] % 4);
-            if (shotcounts[i] == 4) {
-                ++target_chain;
-            }
+            shotcounts[i] = chain * CLEAR_THRESHOLD - popcounts[i];
+            result.target_shots += shotcounts[i];
         } else {
             shotcounts[i] = 0;
         }
     }
-    all[0] |= s->floors[0][NUM_COLORS - 1];
-    all[1] |= s->floors[1][NUM_COLORS - 1];
+    result.target_chain = target_chain;
 
     state *c = malloc(sizeof(state));
     state *cc = malloc(sizeof(state));
+    size_t iteration = 0;
     while (1) {
         memcpy(c, s, sizeof(state));
         puyos_t allowed = FULL & ~all[1];
@@ -298,23 +338,34 @@ int chainify(state *s) {
         }
         memcpy(cc, c, sizeof(state));
         int chain;
-        resolve(cc, &chain);
+        int score = resolve(cc, &chain);
         if (chain >= target_chain) {
             memcpy(s, c, sizeof(state));
             handle_gravity(s);
+            result.chain = chain;
+            result.score = score;
+            result.puyos_remaining = 0;
+            for (int j = 0; j < NUM_FLOORS; ++j) {
+                for (int i = 0; i < NUM_COLORS; ++i) {
+                    result.puyos_remaining += popcount(cc->floors[j][i]);
+                }
+            }
+            result.iterations = iteration;
             break;
         }
-        if (rand() % SHOT_PATIENCE == 0) {
+        if ((iteration + 1) % shot_patience == 0) {
             int j = rand() % (NUM_COLORS - 1);
-            if (shotcounts[j]) {
-                shotcounts[j]++;
+            if (popcounts[j]) {
+                ++shotcounts[j];
+                ++result.extra_shots;
             }
         }
-        if (rand() % CHAIN_PATIENCE == 0) {
+        if ((iteration + 1) % chain_patience == 0) {
             --target_chain;
         }
+        ++iteration;
     }
     free(c);
     free(cc);
-    return 0;
+    return result;
 }
