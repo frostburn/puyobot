@@ -45,13 +45,8 @@ void redraw_state(state *s) {
 
 void animate_gravity(state *s, void (*callback)(state*)) {
     assert(NUM_FLOORS == 2);
-    puyos_t all[2];
-    for (int i = 0; i < NUM_FLOORS; ++i) {
-        all[i] = 0;
-        for (int j = 0; j < NUM_COLORS; ++j) {
-            all[i] |= s->floors[i][j];
-        }
-    }
+    puyos_t all[NUM_FLOORS];
+    get_state_mask(s, all);
 
     puyos_t temp[2];
     do {

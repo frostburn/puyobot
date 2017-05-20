@@ -205,7 +205,7 @@ unsigned char find_trigger(state *s, puyos_t *out) {
     return color_flags;
 }
 
-int expand_chain(state *s) {
+int extend_chain(state *s, puyos_t *fixed) {
     assert(NUM_FLOORS == 2);
     assert(NUM_COLORS == 6);
     if (state_is_clear(s)) {
@@ -248,8 +248,11 @@ int expand_chain(state *s) {
 
     state *cc = malloc(sizeof(state));
     for (int i = 0; i < n; ++i) {
-        if ((tetrominoes[2*i] & trigger[0]) || (tetrominoes[2*i + 1] & trigger[1])) {
-            puyos_t tetromino[2] = {tetrominoes[2*i], tetrominoes[2*i + 1]};
+        puyos_t tetromino[2] = {tetrominoes[2*i], tetrominoes[2*i + 1]};
+        if (fixed && ((tetromino[0] & fixed[0]) || (tetromino[1] & fixed[1]))) {
+            continue;
+        }
+        if ((tetromino[0] & trigger[0]) || (tetromino[1] & trigger[1])) {
             puyos_t lifter[2] = {tetromino[0], tetromino[1]};
             memcpy(c, s, sizeof(state));
             while (lifter[0] || lifter[1]) {
@@ -331,21 +334,18 @@ template_result _chainify_cleanup(state *s, puyos_t *shots, template_result resu
 
 template_result chainify(state *s, size_t shot_patience, size_t chain_patience) {
     template_result result;
-    puyos_t all[NUM_FLOORS] = {
-        s->floors[0][NUM_COLORS - 1],
-        s->floors[1][NUM_COLORS - 1],
-    };
     int popcounts[NUM_COLORS - 1];
     int target_shotcounts[NUM_COLORS - 1];
     int shotcounts[NUM_COLORS - 1];
     int target_chain = 0;
+    puyos_t all[NUM_FLOORS];
     result.target_shots = 0;
     result.extra_shots = 0;
+    get_state_mask(s, all);
     for (int i = 0; i < NUM_COLORS - 1; ++i) {
         popcounts[i] = 0;
         for (int j = 0; j < NUM_FLOORS; ++j) {
             popcounts[i] += popcount(s->floors[j][i]);
-            all[j] |= s->floors[j][i];
         }
         int chain = ceil_div(popcounts[i], CLEAR_THRESHOLD);
         if (popcounts[i] > 1) {

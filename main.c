@@ -326,6 +326,15 @@ int resolve(state *s, int *chain_out) {
     return total_score + all_clear_bonus;
 }
 
+void get_state_mask(state *s, puyos_t *out) {
+    for (int i = 0; i < NUM_FLOORS; ++i) {
+        out[i] = 0;
+        for (int j = 0; j < NUM_COLORS; ++j) {
+            out[i] |= s->floors[i][j];
+        }
+    }
+}
+
 void assert_sanity(state *s) {
     for (int j = 0; j < NUM_FLOORS; ++j) {
         for (int i = 0; i < NUM_COLORS; ++i) {
@@ -346,5 +355,36 @@ void assert_sanity(state *s) {
 #include "test.c"
 
 int main() {
-    test_all();
+    int seed = time(NULL);
+    printf("seed=%d;\n", seed);
+    srand(seed);
+
+    state *s = calloc(1, sizeof(state));
+    while (1) {
+        clear_state(s);
+        puyos_t allowed = FULL;
+        int i = 12;
+        while(i) {
+            puyos_t p = 1ULL << (rand() % (WIDTH * HEIGHT));
+            if (p & allowed) {
+                s->floors[1][rand() % (NUM_COLORS - 1)] |= p;
+                allowed ^= p;
+                --i;
+            }
+        }
+        if(!resolve(s, NULL)) {
+            break;
+        }
+    }
+    print_state(s);
+    assert_sanity(s);
+    puyos_t fixed[NUM_FLOORS];
+    get_state_mask(s, fixed);
+    template_result r = chainify(s, SHOT_PATIENCE, CHAIN_PATIENCE);
+    print_template_result(r);
+    assert_sanity(s);
+    print_state(s);
+    while (extend_chain(s, fixed)){}
+    print_state(s);
+    animate(s, redraw_state);
 }

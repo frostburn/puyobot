@@ -1,12 +1,7 @@
 void reference_gravity(state *s) {
     assert(NUM_FLOORS == 2);
-    puyos_t all[2];
-    for (int i = 0; i < NUM_FLOORS; ++i) {
-        all[i] = 0;
-        for (int j = 0; j < NUM_COLORS; ++j) {
-            all[i] |= s->floors[i][j];
-        }
-    }
+    puyos_t all[NUM_FLOORS];
+    get_state_mask(s, all);
     for (int i = 0; i < WIDTH; ++i) {
         int pile_size = 0;
         for (int j = 0; j < TOTAL_HEIGHT; ++j) {
