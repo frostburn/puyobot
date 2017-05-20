@@ -126,6 +126,18 @@ void print_state(state *s) {
     }
 }
 
+void repr_state(state *s) {
+    printf("(state){{");
+    for (int i = 0; i < NUM_FLOORS; ++i) {
+        printf("{");
+        for (int j = 0; j < NUM_COLORS; ++j) {
+            printf("%lluull, ", s->floors[i][j]);
+        }
+        printf("\b\b}, ");
+    }
+    printf("\b\b}}\n");
+}
+
 int state_euler(state *s) {
     int total = 0;
     puyos_t bottom_edges = 0;
@@ -334,36 +346,5 @@ void assert_sanity(state *s) {
 #include "test.c"
 
 int main() {
-    int seed = time(NULL);
-    printf("seed=%d;\n", seed);
-    srand(seed);
-
-    state *s = calloc(1, sizeof(state));
-    while (1) {
-        clear_state(s);
-        puyos_t allowed = FULL;
-        int i = 60;
-        while(i) {
-            puyos_t p = 1ULL << (rand() % (WIDTH * HEIGHT));
-            if (p & allowed) {
-                s->floors[1][rand() % (NUM_COLORS - 1)] |= p;
-                allowed ^= p;
-                --i;
-            }
-        }
-        s->floors[0][0] = lrand() * lrand() * lrand();
-        s->floors[0][0] &= FULL & ~DEATH_BLOCK;
-        s->floors[0][1] = lrand() * lrand() * lrand();
-        s->floors[0][1] &= FULL & ~DEATH_BLOCK & ~s->floors[0][0];
-        if(!resolve(s, NULL)) {
-            break;
-        }
-    }
-    print_state(s);
-    assert_sanity(s);
-    template_result r = chainify(s, SHOT_PATIENCE, CHAIN_PATIENCE / 20);
-    print_template_result(r);
-    assert_sanity(s);
-    print_state(s);
-    animate(s, redraw_state);
+    test_all();
 }

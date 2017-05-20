@@ -360,6 +360,24 @@ template_result chainify(state *s, size_t shot_patience, size_t chain_patience) 
     result.target_chain = target_chain;
     int free_space = popcount(FULL & ~all[1]) + popcount(FULL & ~DEATH_BLOCK & ~all[0]);
 
+    if (target_chain == 0) {
+        shotcounts[0] = CLEAR_THRESHOLD;
+        target_shotcounts[0] = CLEAR_THRESHOLD;
+        result.target_shots = CLEAR_THRESHOLD;
+        result.target_chain = 1;
+        target_chain = 1;
+    }
+    while (result.target_shots == 0) {
+        int i = rand() % (NUM_COLORS - 1);
+        if (popcounts[i] > 0) {
+            ++shotcounts[i];
+            ++target_shotcounts[i];
+            ++result.target_shots;
+            ++result.target_chain;
+            ++target_chain;
+            break;
+        }
+    }
     while (result.target_shots > free_space) {
         int i = rand() % (NUM_COLORS - 1);
         if (shotcounts[i] > 0) {

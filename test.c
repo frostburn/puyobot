@@ -180,6 +180,16 @@ void test_state_euler() {
     assert(e == state_euler(s));
 }
 
+void test_chainify() {
+    srand(time(NULL));
+    state s = (state){{{0ull, 0ull, 0ull, 0ull, 0ull, 0ull}, {0ull, 361484238840659968ull, 0ull, 18014398509481984ull, 4503599627370496ull, 0ull}}};
+    chainify(&s, SHOT_PATIENCE, CHAIN_PATIENCE);
+    print_state(&s);
+    clear_state(&s);
+    chainify(&s, SHOT_PATIENCE, CHAIN_PATIENCE);
+    print_state(&s);
+}
+
 void test_all() {
     test_lrand();
     test_gravity();
@@ -188,4 +198,5 @@ void test_all() {
     test_ghost_chain();
     test_euler();
     test_state_euler();
+    test_chainify();
 }
