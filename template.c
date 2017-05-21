@@ -185,6 +185,7 @@ int extend_bottom_chain(bottom_template *template) {
                 free(template->floor);
                 template->floor = temp2;
                 ++template->num_colors;
+                free(tetrominoes);
                 free(temp);
                 return 1;
             }
@@ -192,6 +193,7 @@ int extend_bottom_chain(bottom_template *template) {
         }
     }
     free(temp);
+    free(tetrominoes);
     free(temp2);
     return 0;
 }
@@ -207,7 +209,7 @@ int spam_bottom(bottom_template *template) {
     int free_space = WIDTH * HEIGHT - popcount(all);
     int j = num_colors;
     template->num_colors += free_space;
-    floor = realloc(floor, (template->num_colors) * sizeof(puyos_t));
+    floor = realloc(floor, template->num_colors * sizeof(puyos_t));
     template->floor = floor;
     for (int i = 0; i < WIDTH * HEIGHT; ++i) {
         puyos_t p = 1ULL << i;
@@ -215,6 +217,29 @@ int spam_bottom(bottom_template *template) {
             floor[j++] = p;
         }
     }
+    return free_space;
+}
+
+int sprinkle_bottom(bottom_template *template) {
+    puyos_t *floor = template->floor;
+    int num_colors = template->num_colors;
+    handle_bottom_gravity(floor, num_colors);
+    puyos_t all = 0;
+    for (int i = 0; i < num_colors; ++i) {
+        all |= floor[i];
+    }
+    int free_space = popcount(TOP & ~all);
+    int j = num_colors;
+    template->num_colors += free_space;
+    floor = realloc(floor, template->num_colors * sizeof(puyos_t));
+    template->floor = floor;
+    for (int i = 0; i < WIDTH; ++i) {
+        puyos_t p = 1ULL << i;
+        if (!(p & all)) {
+            floor[j++] = p;
+        }
+    }
+    handle_bottom_gravity(floor, template->num_colors);
     return free_space;
 }
 

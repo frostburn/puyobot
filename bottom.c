@@ -15,10 +15,10 @@ void print_bottom(puyos_t *floor, int num_colors) {
                 printf("\x1b[3%d;1m", k % 6 + 1);
                 int c = '0' + k;
                 if (c > '9') {
-                    c = c - '9' + 'a';
+                    c = c - '9' + 'a' - 1;
                 }
                 if (c > 'z') {
-                    c = c - 'z' + 'A';
+                    c = c - 'z' + 'A' - 1;
                 }
                 printf(" %c", c);
                 any  = 1;
