@@ -6,7 +6,7 @@
 #define CHOICE_X_MASK (0x3f)
 #define COLOR1_MASK (15)
 #define COLOR2_SHIFT (4)
-
+#define DEATH_SCORE (1e44)
 
 typedef unsigned char content_t;
 typedef unsigned char num_t;
@@ -178,13 +178,9 @@ float evaluate(state *s, value_node *root, eval_fun f) {
             if (legal) {
                 float current_value = resolve(child, NULL);
                 float future_value = evaluate(child, root->deals[j].choices[k].destination, f);
-                if (current_value > future_value) {
-                    root->deals[j].choices[k].destination->value = current_value;
-                } else {
-                    root->deals[j].choices[k].destination->value = future_value;
-                }
+                root->deals[j].choices[k].destination->value = current_value + future_value;
             } else {
-                root->deals[j].choices[k].destination->value = -1;
+                root->deals[j].choices[k].destination->value = -DEATH_SCORE;
             }
             free(child);
             if (root->deals[j].choices[k].destination->value > deal_value) {
@@ -221,18 +217,21 @@ content_t best_choice(value_node *root) {
     return best_action;
 }
 
-content_t choose(value_node *root) {
+choice_branch* choose(value_node *root) {
+    if (!root) {
+        return NULL;
+    }
     if (root->num_deals != 1) {
-        return 0;
+        return root->deals->choices;
     }
     double prob = jdrand();
     for (num_t i = 0; i < root->deals->num_choices; ++i) {
         prob -= root->deals->choices[i].probability;
         if (prob <= 0) {
-            return root->deals->choices[i].content;
+            return root->deals->choices + i;
         }
     }
-    return 0;
+    return root->deals->choices;
 }
 
 void free_tree(value_node *root) {
@@ -294,6 +293,7 @@ float eval_fun_weighted(state *s) {
     return total_score / total_weight;
 }
 
+#define SOLVE_DEBUG (0)
 content_t solve(state *s, content_t *deals, size_t num_deals, size_t depth, eval_fun f) {
     value_node *root = calloc(1, sizeof(value_node));
     append_deals(root, deals, num_deals);
@@ -301,9 +301,22 @@ content_t solve(state *s, content_t *deals, size_t num_deals, size_t depth, eval
         expand(root);
     }
     evaluate(s, root, f);
-    content_t choice = choose(root);
+    choice_branch *choice = choose(root);
+    content_t action = choice->content;
+    if (SOLVE_DEBUG) {
+        state *c = copy_state(s);
+        value_node *r = root;
+        while (r && r->num_deals == 1) {
+            apply_deal_and_choice(c, r->deals->content, choice->content);
+            print_state(c);
+            printf("value=%f\n", r->value);
+            r = choice->destination;
+            resolve(c, NULL);
+            choice = choose(r);
+        }
+    }
     free_tree(root);
-    return choice;
+    return action;
 }
 
 #include "montecarlo.c"

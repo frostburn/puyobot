@@ -2,7 +2,6 @@
 
 #define EXPLORATION (5555.55)
 #define TREE_SCORE_FACTOR (0.1)
-#define DEATH_SCORE (1e44)
 #define MAX_DEPTH (255)
 
 choice_branch* tree_policy(state *s, value_node *root) {

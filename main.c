@@ -363,16 +363,27 @@ void init_all() {
 int main() {
     init_all();
 
+    bottom_template *t;
     int num_links = 5;
-    bottom_template *t = bottom_chain_of_fours(num_links);
-    for (int i = 0; i < 4; ++i) {
-        extend_bottom_chain(t);
+    while (1) {
+        t = bottom_chain_of_fours(num_links);
+        for (int i = 0; i < 0; ++i) {
+            extend_bottom_chain(t);
+        }
+        sprinkle_bottom(t);
+        if (!cut_bottom_trigger(t)) {
+            free_bottom_template(t);
+            continue;
+        }
+        t->conflicts = color_conflicts(t->floor, t->num_colors);
+        break;
     }
-    sprinkle_bottom(t);
-    t->conflicts = color_conflicts(t->floor, t->num_colors);
     print_bottom(t->floor, t->num_colors);
-    state *s = state_from_bottom(t);
-    print_state(s);
-    print_state(s);
-    animate(s, redraw_state);
+
+    float eval_template(state *s) {
+        float score = bottom_match_score(s, t);
+        return 1e6 * score;
+    }
+
+    demo(1, 100, &eval_template);
 }

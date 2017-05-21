@@ -55,6 +55,12 @@ void print_template_result(template_result result) {
     );
 }
 
+void free_bottom_template(bottom_template *template) {
+    free(template->floor);
+    free(template->conflicts);
+    free(template);
+}
+
 #include "bottom.c"
 
 bottom_template* bottom_chain_of_fours(int num_links) {
@@ -298,6 +304,69 @@ state* state_from_bottom(bottom_template *template) {
     }
     free(assignments);
     return s;
+}
+
+double bottom_match_score(state *s, bottom_template *template) {
+    assert(template->conflicts);
+    int num_colors = template->num_colors;
+    int *assignments = malloc(num_colors * sizeof(int));
+    for (int j = 0; j < num_colors; ++j) {
+        assignments[j] = -1 - j;
+    }
+    puyos_t *floor = s->floors[1];
+    puyos_t assigned = 0;
+    int num_unassigned = 0;
+    for (int i = 0; i < NUM_COLORS - 1; ++i) {
+        puyos_t unassigned = floor[i];
+        for (int j = 0; j < num_colors; ++j) {
+            if (template->floor[j] & floor[i]) {
+                if (assignments[j] >= 0) {
+                    free(assignments);
+                    return -1;
+                }
+                assignments[j] = i;
+                if (j < template->num_links) {
+                    assigned |= template->floor[j] & floor[i];
+                }
+                unassigned &= ~template->floor[j];
+            }
+        }
+        num_unassigned += popcount(unassigned);
+    }
+    for (int i = 0; i < num_colors; ++i) {
+        for (int j = 0; j < num_colors; ++j) {
+            if (assignments[i] == assignments[j] && template->conflicts[i + j * num_colors]) {
+                return 0;
+            }
+        }
+    }
+    free(assignments);
+    return (popcount(assigned) + 1.0) / (num_unassigned + 1.0);
+}
+
+int cut_bottom_trigger(bottom_template *template) {
+    puyos_t *floor = template->floor;
+    int success = 0;
+    for (int i = 0; i < WIDTH * HEIGHT; ++i) {
+        puyos_t p = 1ULL << i;
+        if (p & floor[0]) {
+            p = beam_up(p);
+            for (int j = 1; j < template->num_links; ++j) {
+                if (p & floor[j]) {
+                    p = 0;
+                    break;
+                }
+            }
+            if (p) {
+                floor[0] &= ~p;
+                for (int j = template->num_links; j < template->num_colors; ++j) {
+                    floor[j] &= ~p;
+                }
+                success = 1;
+            }
+        }
+    }
+    return success;
 }
 
 unsigned char find_trigger(state *s, puyos_t *out) {
