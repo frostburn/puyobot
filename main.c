@@ -359,32 +359,22 @@ int main() {
     printf("seed=%d;\n", seed);
     srand(seed);
 
-    state *s = calloc(1, sizeof(state));
-    while (1) {
-        clear_state(s);
-        puyos_t allowed = FULL;
-        int i = 12;
-        while(i) {
-            puyos_t p = 1ULL << (rand() % (WIDTH * HEIGHT));
-            if (p & allowed) {
-                s->floors[1][rand() % (NUM_COLORS - 1)] |= p;
-                allowed ^= p;
-                --i;
+    bottom_template *t = calloc(1, sizeof(bottom_template));
+    int num_links = 6;
+    t->floor = bottom_chain_of_fours(num_links);
+    t->num_colors = num_links;
+    while(extend_bottom_chain(t));
+    spam_bottom(t);
+    print_bottom(t->floor, t->num_colors);
+    t->conflicts = color_conflicts(t->floor, t->num_colors);
+    for (int i = 0; i < t->num_colors; ++i) {
+        for (int j = 0; j < t->num_colors; ++j) {
+            if (t->conflicts[i + j * t->num_colors]) {
+                printf(" @");
+            } else {
+                printf("  ");
             }
         }
-        if(!resolve(s, NULL)) {
-            break;
-        }
+        printf("\n");
     }
-    print_state(s);
-    assert_sanity(s);
-    puyos_t fixed[NUM_FLOORS];
-    get_state_mask(s, fixed);
-    template_result r = chainify(s, SHOT_PATIENCE, CHAIN_PATIENCE);
-    print_template_result(r);
-    assert_sanity(s);
-    print_state(s);
-    while (extend_chain(s, fixed)){}
-    print_state(s);
-    animate(s, redraw_state);
 }

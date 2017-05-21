@@ -33,6 +33,13 @@ typedef struct template_result
     size_t iterations;
 } template_result;
 
+typedef struct bottom_template
+{
+    puyos_t *floor;
+    int num_colors;
+    char *conflicts;
+} bottom_template;
+
 
 void print_template_result(template_result result) {
     printf(
@@ -47,105 +54,24 @@ void print_template_result(template_result result) {
     );
 }
 
-void handle_bottom_gravity(state *s, int num_colors) {
-    puyos_t all;
-    all = 0;
-    puyos_t *floor = s->floors[1];
-    for (int j = 0; j < num_colors; ++j) {
-        all |= floor[j];
-    }
+#include "bottom.c"
 
-    puyos_t temp;
-    do {
-        temp = all;
-        puyos_t bellow, falling;
-        bellow = (all >> V_SHIFT) | BOTTOM;
-        all = 0;
-        for (int i = 0; i < num_colors; ++i) {
-            falling = floor[i] & ~bellow;
-            floor[i] = (falling << V_SHIFT) | (floor[i] & ~falling);
-            all |= floor[i];
-        }
-    } while (temp != all);
-}
-
-int clear_bottom_groups(state *s, int num_colors) {
-    int num_cleared = 0;
-    puyos_t *floor = s->floors[1];
-    for (int i = 0; i < num_colors; ++i) {
-        puyos_t bottom = floor[i];
-        for (int j = 0; j < HEIGHT * WIDTH; j += 2) {
-            puyos_t bottom_group = 3ULL << j;
-            bottom_group = flood(bottom_group, bottom);
-            bottom ^= bottom_group;
-            int group_size = popcount(bottom_group);
-            if (group_size >= CLEAR_THRESHOLD) {
-                floor[i] ^= bottom_group;
-                num_cleared += group_size;
-            }
-            if (!bottom) {
-                break;
-            }
-        }
-    }
-    return num_cleared;
-}
-
-int resolve_bottom(state *s, int num_colors) {
-    int chain = -1;
-    while(1) {
-        ++chain;
-        handle_bottom_gravity(s, num_colors);
-        if (!clear_bottom_groups(s, num_colors)) {
-            break;
-        }
-    }
-    return chain;
-}
-
-int has_gap(puyos_t puyos) {
-    puyos = beam_up(puyos);
-    // Check if there is a gap.
-    int run = 0;
-    int gap = 0;
-    for (int i = 0; i < WIDTH; ++i) {
-        puyos_t probe = 1ULL << i;
-        if (probe & puyos) {
-            run = 1;
-            if (gap) {
-                return 1;
-            }
-        } else if (run) {
-            gap = 1;
-        }
-    }
-    return 0;
-}
-
-state* chain_of_fours(int num_links) {
-    assert(WIDTH == 6);
-    assert(NUM_FLOORS == 2);
-    state *s = calloc(1, sizeof(state));
-    state *c = calloc(1, sizeof(state));
-    int num_colors = num_links;
-    if (num_colors > NUM_COLORS - 1) {
-        num_colors = NUM_COLORS - 1;
-    }
-
+puyos_t* bottom_chain_of_fours(int num_links) {
+    puyos_t *floor = malloc(num_links * sizeof(puyos_t));
+    puyos_t *temp = malloc(num_links * sizeof(puyos_t));
+    int *color_order = malloc(num_links * sizeof(int));
     while (1) {
-        clear_state(s);
-        puyos_t *floor = s->floors[1];
+        memset(floor, 0, num_links * sizeof(puyos_t));
         // Insert the trigger. Always a tetrominoe.
         // Can be red without loss of generality.
         // Falls into place so doesn't always end up being the trigger.
-        floor[0] = 0;
         int i = rand() % NUM_TETROMINOES;
         floor[0] |= TETROMINOES[i] << (
             rand() % (WIDTH - TETROMINO_DIMS[i][0]) +
             (rand() % (HEIGHT - TETROMINO_DIMS[i][1])) * V_SHIFT
         );
         puyos_t allowed = FULL ^ floor[0];
-        for (int k = 1; k < num_colors; ++k) {
+        for (int k = 1; k < num_links; ++k) {
             int j = CLEAR_THRESHOLD;
             while (j) {
                 puyos_t p = 1ULL << (rand() % (WIDTH * HEIGHT));
@@ -162,29 +88,134 @@ state* chain_of_fours(int num_links) {
                 continue;
             }
         }
-        int k = num_links - num_colors;
-        while (k) {
-            int color = rand() % (NUM_COLORS - 1);
-            int j = CLEAR_THRESHOLD;
-            while (j) {
-                puyos_t p = 1ULL << (rand() % (WIDTH * HEIGHT));
-                if (p & allowed) {
-                    floor[color] |= p;
-                    allowed ^= p;
-                    --j;
-                }
+        memcpy(temp, floor, num_links * sizeof(puyos_t));
+        int chain = resolve_bottom(temp, num_links, color_order);
+        if (chain == num_links) {
+            handle_bottom_gravity(floor, num_links);
+            memcpy(temp, floor, num_links * sizeof(puyos_t));
+            for (int i = 0; i < num_links; ++i) {
+                floor[i] = temp[color_order[i]];
             }
-            k--;
-        }
-        memcpy(c, s, sizeof(state));
-        int chain = resolve_bottom(c, num_colors);
-        if (state_is_clear(c) && chain==num_links) {
-            handle_bottom_gravity(s, num_colors);
             break;
         }
     }
-    free(c);
+    free(temp);
+    return floor;
+}
+
+state* chain_of_fours(int num_links) {
+    assert(num_links < NUM_COLORS - 1);
+    state *s = calloc(1, sizeof(state));
+    puyos_t *floor = bottom_chain_of_fours(num_links);
+    for (int i = 0; i < num_links; ++i) {
+        s->floors[1][i] = floor[i];
+    }
+    free(floor);
     return s;
+}
+
+int extend_bottom_chain(bottom_template *template) {
+    int num_colors = template->num_colors;
+    puyos_t *floor = template->floor;
+    if (!num_colors) {
+        int i = rand() % NUM_TETROMINOES;
+        template->num_colors = 1;
+        template->floor = malloc(sizeof(puyos_t));
+        template->floor[0] = TETROMINOES[i] << (rand() % (WIDTH - TETROMINO_DIMS[i][0]));
+        handle_bottom_gravity(template->floor, 1);
+        return 1;
+    }
+
+    puyos_t *temp = malloc(num_colors * sizeof(puyos_t));
+    memcpy(temp, floor, num_colors * sizeof(puyos_t));
+    int color_cleared;
+    clear_bottom_groups(temp, num_colors, &color_cleared);
+    puyos_t trigger = 0;
+    for (int i = 0; i < num_colors; ++i) {
+        if (floor[i] != temp[i]) {
+            trigger = floor[i] ^ temp[i];
+            break;
+        }
+    }
+    if (!trigger) {
+        free(temp);
+        return 0;
+    }
+    memcpy(temp, floor, num_colors * sizeof(puyos_t));
+    int chain = resolve_bottom(temp, num_colors, NULL);
+    trigger = beam_down(trigger);
+
+    static puyos_t _tetrominoes[725];
+    static int n;
+    if (!_tetrominoes[0]) {
+        n = 0;
+        for (int i = 0; i < NUM_TETROMINOES; ++i) {
+            for (int j = 0; j <= WIDTH - TETROMINO_DIMS[i][0]; ++j) {
+                for (int k = 0; k <= HEIGHT - TETROMINO_DIMS[i][1]; ++k) {
+                    _tetrominoes[n++] = TETROMINOES[i] << (j + k * V_SHIFT);
+                }
+            }
+        }
+    }
+    puyos_t *tetrominoes = malloc(n * sizeof(puyos_t));
+    memcpy(tetrominoes, _tetrominoes, n * sizeof(puyos_t));
+    shuffle(tetrominoes, n);
+
+    puyos_t *temp2 = malloc((num_colors + 1) * sizeof(puyos_t));
+    for (int i = 0; i < n; ++i) {
+        if (tetrominoes[i] & trigger) {
+            puyos_t tetromino = tetrominoes[i];
+            puyos_t lifter = tetromino;
+            memcpy(temp, floor, num_colors * sizeof(puyos_t));
+            while (lifter) {
+                puyos_t lift = beam_up(tetromino);
+                for (int j = 0; j < num_colors; ++j) {
+                    puyos_t p = temp[j];
+                    temp[j] = (p & ~lift) | ((p & lift) >> V_SHIFT);
+                }
+                lifter &= lifter >> V_SHIFT;
+            }
+            memcpy(temp2 + 1, temp, num_colors * sizeof(puyos_t));
+            temp2[0] = tetromino;
+            int new_chain = resolve_bottom(temp2, num_colors + 1, NULL);
+            if (new_chain > chain) {
+                memcpy(temp2 + 1, temp, num_colors * sizeof(puyos_t));
+                temp2[0] = tetromino;
+                handle_bottom_gravity(temp2, num_colors + 1);
+                free(template->floor);
+                template->floor = temp2;
+                ++template->num_colors;
+                free(temp);
+                return 1;
+            }
+
+        }
+    }
+    free(temp);
+    free(temp2);
+    return 0;
+}
+
+int spam_bottom(bottom_template *template) {
+    puyos_t *floor = template->floor;
+    int num_colors = template->num_colors;
+    handle_bottom_gravity(floor, num_colors);
+    puyos_t all = 0;
+    for (int i = 0; i < num_colors; ++i) {
+        all |= floor[i];
+    }
+    int free_space = WIDTH * HEIGHT - popcount(all);
+    int j = num_colors;
+    template->num_colors += free_space;
+    floor = realloc(floor, (template->num_colors) * sizeof(puyos_t));
+    template->floor = floor;
+    for (int i = 0; i < WIDTH * HEIGHT; ++i) {
+        puyos_t p = 1ULL << i;
+        if (!(p & all)) {
+            floor[j++] = p;
+        }
+    }
+    return free_space;
 }
 
 unsigned char find_trigger(state *s, puyos_t *out) {
@@ -211,7 +242,7 @@ int extend_chain(state *s, puyos_t *fixed) {
     if (state_is_clear(s)) {
         int i = rand() % NUM_TETROMINOES;
         s->floors[1][0] = TETROMINOES[i] << (rand() % (WIDTH - TETROMINO_DIMS[i][0]));
-        handle_bottom_gravity(s, 1);
+        handle_gravity(s);
         return 1;
     }
 
