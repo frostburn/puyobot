@@ -200,7 +200,7 @@ int num_groups(puyos_t puyos) {
 void shuffle(puyos_t *array, size_t n) {
     if (n > 1) {
         for (size_t i = 0; i < n - 1; ++i) {
-          size_t j = i + rand() / (RAND_MAX / (n - i) + 1);
+          size_t j = i + jrand() % (n - i);
           puyos_t t = array[j];
           array[j] = array[i];
           array[i] = t;
@@ -211,7 +211,7 @@ void shuffle(puyos_t *array, size_t n) {
 void shuffle_2(puyos_t *array, size_t n) {
     if (n > 1) {
         for (size_t i = 0; i < n - 1; ++i) {
-          size_t j = i + rand() / (RAND_MAX / (n - i) + 1);
+          size_t j = i + jrand() % (n - i);
           puyos_t t0 = array[2*j];
           puyos_t t1 = array[2*j + 1];
           array[2*j] = array[2*i];

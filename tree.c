@@ -51,7 +51,7 @@ content_t make_piece(content_t color1, content_t color2) {
 }
 
 content_t rand_piece() {
-    return make_piece(rand() % (NUM_COLORS - 1), rand() % (NUM_COLORS - 1));
+    return make_piece(jrand() % (NUM_COLORS - 1), jrand() % (NUM_COLORS - 1));
 }
 
 content_t deal_color1(content_t deal) {
@@ -63,11 +63,11 @@ content_t deal_color2(content_t deal) {
 }
 
 content_t rand_choice(content_t min_x, content_t max_x) {
-    content_t rotation = ROTATIONS[rand() % 4];
+    content_t rotation = ROTATIONS[jrand() % 4];
     if (max_x == 5 && (rotation == CHOICE_90 || rotation == CHOICE_270)) {
         max_x = 4;
     }
-    return (min_x + (rand() % (1 + max_x - min_x))) | rotation;
+    return (min_x + (jrand() % (1 + max_x - min_x))) | rotation;
 }
 
 int apply_deal_and_choice(state *s, content_t deal, content_t choice) {
@@ -225,7 +225,7 @@ content_t choose(value_node *root) {
     if (root->num_deals != 1) {
         return 0;
     }
-    double prob = drand();
+    double prob = jdrand();
     for (num_t i = 0; i < root->deals->num_choices; ++i) {
         prob -= root->deals->choices[i].probability;
         if (prob <= 0) {
@@ -257,7 +257,7 @@ float eval_fun_random(state *s) {
     for (int i = 0; i < 10; ++i) {
         c = copy_state(s);
         for (int j = 0; j < 25; ++j) {
-            if(!apply_deal_and_choice(c, rand_piece(), CHOICES[rand() % NUM_CHOICES])) {
+            if(!apply_deal_and_choice(c, rand_piece(), CHOICES[jrand() % NUM_CHOICES])) {
                 break;
             }
             total_score += resolve(c, NULL);
@@ -274,7 +274,7 @@ float eval_fun_weighted(state *s) {
     for (int i = 0; i < 10; ++i) {
         c = copy_state(s);
         for (int j = 0; j < 25; ++j) {
-            if(!apply_deal_and_choice(c, rand_piece(), CHOICES[rand() % NUM_CHOICES])) {
+            if(!apply_deal_and_choice(c, rand_piece(), CHOICES[jrand() % NUM_CHOICES])) {
                 break;
             }
             double score = resolve(c, NULL);

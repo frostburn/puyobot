@@ -34,10 +34,9 @@ void reference_gravity(state *s) {
 }
 
 void test_lrand() {
-    srand(time(NULL));
     puyos_t result = 0;
     for (int i = 0; i < 10000; ++i) {
-        result |= lrand();
+        result |= jlrand();
     }
     assert(result == ~0);
 }
@@ -45,12 +44,11 @@ void test_lrand() {
 void test_gravity() {
     state *s = calloc(1, sizeof(state));
     state *ref = calloc(1, sizeof(state));
-    srand(time(NULL));
     int puyo_count = 0;
     for (int j = 0; j < NUM_FLOORS; j++) {
         puyos_t allowed = FULL;
         for (int i = 0; i < NUM_COLORS; ++i) {
-            puyos_t candidates = lrand() & lrand() & lrand();
+            puyos_t candidates = jlrand() & jlrand() & jlrand();
             candidates &= allowed;
             allowed ^= candidates;
             s->floors[j][i] = candidates;
@@ -77,10 +75,9 @@ void test_clear() {
     int test_color;
     puyos_t test_group;
     state *s = calloc(1, sizeof(state));
-    srand(time(NULL));
     for (int i = 0; i < WIDTH * HEIGHT; ++i) {
         for (int j = 0; j < NUM_FLOORS; ++j) {
-            int color = rand() % NUM_COLORS;
+            int color = jrand() % NUM_COLORS;
             s->floors[j][color] |= 1ULL << i;
         }
     }
@@ -143,8 +140,7 @@ void test_ghost_chain() {
 }
 
 void test_euler() {
-    srand(time(NULL));
-    puyos_t noise = lrand() & FULL & ~(TOP | BOTTOM | LEFT_WALL | RIGHT_WALL);
+    puyos_t noise = jlrand() & FULL & ~(TOP | BOTTOM | LEFT_WALL | RIGHT_WALL);
     int e = euler(noise);
     print_puyos(noise);
     printf("e=%d\n", e);
@@ -155,10 +151,9 @@ void test_euler() {
 }
 
 void test_state_euler() {
-    srand(time(NULL));
     state *s = calloc(1, sizeof(state));
-    s->floors[0][0] = lrand() & FULL & ~(LEFT_WALL | RIGHT_WALL);
-    s->floors[1][0] = lrand() & FULL & ~(BOTTOM | LEFT_WALL | RIGHT_WALL);
+    s->floors[0][0] = jlrand() & FULL & ~(LEFT_WALL | RIGHT_WALL);
+    s->floors[1][0] = jlrand() & FULL & ~(BOTTOM | LEFT_WALL | RIGHT_WALL);
     int e = state_euler(s);
     print_state(s);
     printf("e=%d\n", e);
@@ -176,7 +171,6 @@ void test_state_euler() {
 }
 
 void test_chainify() {
-    srand(time(NULL));
     state s = (state){{{0ull, 0ull, 0ull, 0ull, 0ull, 0ull}, {0ull, 361484238840659968ull, 0ull, 18014398509481984ull, 4503599627370496ull, 0ull}}};
     chainify(&s, SHOT_PATIENCE, CHAIN_PATIENCE);
     print_state(&s);

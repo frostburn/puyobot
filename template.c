@@ -65,16 +65,16 @@ puyos_t* bottom_chain_of_fours(int num_links) {
         // Insert the trigger. Always a tetrominoe.
         // Can be red without loss of generality.
         // Falls into place so doesn't always end up being the trigger.
-        int i = rand() % NUM_TETROMINOES;
+        int i = jrand() % NUM_TETROMINOES;
         floor[0] |= TETROMINOES[i] << (
-            rand() % (WIDTH - TETROMINO_DIMS[i][0]) +
-            (rand() % (HEIGHT - TETROMINO_DIMS[i][1])) * V_SHIFT
+            jrand() % (WIDTH - TETROMINO_DIMS[i][0]) +
+            (jrand() % (HEIGHT - TETROMINO_DIMS[i][1])) * V_SHIFT
         );
         puyos_t allowed = FULL ^ floor[0];
         for (int k = 1; k < num_links; ++k) {
             int j = CLEAR_THRESHOLD;
             while (j) {
-                puyos_t p = 1ULL << (rand() % (WIDTH * HEIGHT));
+                puyos_t p = 1ULL << (jrand() % (WIDTH * HEIGHT));
                 if (p & allowed) {
                     floor[k] |= p;
                     allowed ^= p;
@@ -118,10 +118,10 @@ int extend_bottom_chain(bottom_template *template) {
     int num_colors = template->num_colors;
     puyos_t *floor = template->floor;
     if (!num_colors) {
-        int i = rand() % NUM_TETROMINOES;
+        int i = jrand() % NUM_TETROMINOES;
         template->num_colors = 1;
         template->floor = malloc(sizeof(puyos_t));
-        template->floor[0] = TETROMINOES[i] << (rand() % (WIDTH - TETROMINO_DIMS[i][0]));
+        template->floor[0] = TETROMINOES[i] << (jrand() % (WIDTH - TETROMINO_DIMS[i][0]));
         handle_bottom_gravity(template->floor, 1);
         return 1;
     }
@@ -265,8 +265,8 @@ int extend_chain(state *s, puyos_t *fixed) {
     assert(NUM_FLOORS == 2);
     assert(NUM_COLORS == 6);
     if (state_is_clear(s)) {
-        int i = rand() % NUM_TETROMINOES;
-        s->floors[1][0] = TETROMINOES[i] << (rand() % (WIDTH - TETROMINO_DIMS[i][0]));
+        int i = jrand() % NUM_TETROMINOES;
+        s->floors[1][0] = TETROMINOES[i] << (jrand() % (WIDTH - TETROMINO_DIMS[i][0]));
         handle_gravity(s);
         return 1;
     }
@@ -424,7 +424,7 @@ template_result chainify(state *s, size_t shot_patience, size_t chain_patience) 
         target_chain = 1;
     }
     while (result.target_shots == 0) {
-        int i = rand() % (NUM_COLORS - 1);
+        int i = jrand() % (NUM_COLORS - 1);
         if (popcounts[i] > 0) {
             ++shotcounts[i];
             ++target_shotcounts[i];
@@ -435,7 +435,7 @@ template_result chainify(state *s, size_t shot_patience, size_t chain_patience) 
         }
     }
     while (result.target_shots > free_space) {
-        int i = rand() % (NUM_COLORS - 1);
+        int i = jrand() % (NUM_COLORS - 1);
         if (shotcounts[i] > 0) {
             --shotcounts[i];
             --target_shotcounts[i];
@@ -453,8 +453,8 @@ template_result chainify(state *s, size_t shot_patience, size_t chain_patience) 
         for (int k = 0; k < NUM_COLORS - 1; ++k) {
             int j = shotcounts[k];
             while (j) {
-                puyos_t p = 1ULL << (rand() % (WIDTH * HEIGHT));
-                int i = rand() % NUM_FLOORS;
+                puyos_t p = 1ULL << (jrand() % (WIDTH * HEIGHT));
+                int i = jrand() % NUM_FLOORS;
                 if (p & allowed[i]) {
                     c->floors[i][k] |= p;
                     allowed[i] ^= p;
@@ -476,7 +476,7 @@ template_result chainify(state *s, size_t shot_patience, size_t chain_patience) 
             break;
         }
         if ((iteration + 1) % shot_patience == 0 && (result.target_shots + result.extra_shots < free_space)) {
-            int j = rand() % (NUM_COLORS - 1);
+            int j = jrand() % (NUM_COLORS - 1);
             if (popcounts[j]) {
                 ++shotcounts[j];
                 ++result.extra_shots;

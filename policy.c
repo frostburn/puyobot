@@ -1,7 +1,7 @@
 typedef content_t (*policy_fun)(state *s, content_t*, size_t);
 
 content_t random_policy(state *s, content_t *deals, size_t num_deals) {
-    return CHOICES[rand() % NUM_CHOICES];
+    return CHOICES[jrand() % NUM_CHOICES];
 }
 
 content_t euler_policy(state *s, content_t *deals, size_t num_deals) {
@@ -16,7 +16,7 @@ content_t euler_policy(state *s, content_t *deals, size_t num_deals) {
         total_weight += weight;
         free(c);
     }
-    double p = drand() * total_weight;
+    double p = jdrand() * total_weight;
     for (int i = 0; i < NUM_CHOICES; ++i) {
         p -= weights[i];
         if (p <= 0) {
@@ -57,7 +57,7 @@ content_t clump_policy(state *s, content_t *deals, size_t num_deals) {
         total_weight += weights[i];
         free(c);
     }
-    double p = drand() * total_weight;
+    double p = jdrand() * total_weight;
     for (int i = 0; i < NUM_CHOICES; ++i) {
         p -= weights[i];
         if (p <= 0) {
@@ -88,7 +88,7 @@ content_t frog_stacking_policy(state *s, content_t *deals, size_t num_deals) {
             free(c);
             break;
         }
-        choice = CHOICES[rand() % NUM_CHOICES];
+        choice = CHOICES[jrand() % NUM_CHOICES];
         free(c);
     }
     return choice;

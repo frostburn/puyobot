@@ -10,7 +10,7 @@ choice_branch* tree_policy(state *s, value_node *root) {
         return NULL;
     }
     // Assumes uniform deals. XXX: Incorrect under symmetry reduction.
-    int i = rand() % root->num_deals;
+    int i = jrand() % root->num_deals;
     size_t total_visits = 0;
     for (int j = 0; j < root->deals[i].num_choices; ++j) {
         total_visits += root->deals[i].choices[j].visits;
