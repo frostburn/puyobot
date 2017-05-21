@@ -36,6 +36,7 @@ typedef struct template_result
 typedef struct bottom_template
 {
     puyos_t *floor;
+    int num_links;
     int num_colors;
     char *conflicts;
 } bottom_template;
@@ -56,7 +57,7 @@ void print_template_result(template_result result) {
 
 #include "bottom.c"
 
-puyos_t* bottom_chain_of_fours(int num_links) {
+bottom_template* bottom_chain_of_fours(int num_links) {
     puyos_t *floor = malloc(num_links * sizeof(puyos_t));
     puyos_t *temp = malloc(num_links * sizeof(puyos_t));
     int *color_order = malloc(num_links * sizeof(int));
@@ -100,18 +101,11 @@ puyos_t* bottom_chain_of_fours(int num_links) {
         }
     }
     free(temp);
-    return floor;
-}
-
-state* chain_of_fours(int num_links) {
-    assert(num_links < NUM_COLORS - 1);
-    state *s = calloc(1, sizeof(state));
-    puyos_t *floor = bottom_chain_of_fours(num_links);
-    for (int i = 0; i < num_links; ++i) {
-        s->floors[1][i] = floor[i];
-    }
-    free(floor);
-    return s;
+    bottom_template *template = calloc(1, sizeof(bottom_template));
+    template->floor = floor;
+    template->num_links = num_links;
+    template->num_colors = num_links;
+    return template;
 }
 
 int extend_bottom_chain(bottom_template *template) {
@@ -120,6 +114,7 @@ int extend_bottom_chain(bottom_template *template) {
     if (!num_colors) {
         int i = jrand() % NUM_TETROMINOES;
         template->num_colors = 1;
+        template->num_links = 1;
         template->floor = malloc(sizeof(puyos_t));
         template->floor[0] = TETROMINOES[i] << (jrand() % (WIDTH - TETROMINO_DIMS[i][0]));
         handle_bottom_gravity(template->floor, 1);
@@ -185,6 +180,7 @@ int extend_bottom_chain(bottom_template *template) {
                 free(template->floor);
                 template->floor = temp2;
                 ++template->num_colors;
+                template->num_links = new_chain;
                 free(tetrominoes);
                 free(temp);
                 return 1;
@@ -241,6 +237,67 @@ int sprinkle_bottom(bottom_template *template) {
     }
     handle_bottom_gravity(floor, template->num_colors);
     return free_space;
+}
+
+int _assign(bottom_template *template, int *assignments, int index, int num) {
+    int num_colors = template->num_colors;
+    if (index >= num_colors) {
+        for (int i = 0; i < num_colors; ++i) {
+            for (int j = 0; j < num_colors; ++j) {
+                if (assignments[i] == assignments[j] && template->conflicts[i + j * num_colors]) {
+                    return 0;
+                }
+            }
+        }
+        // Need to double check in case of higher level correlations.
+        puyos_t *temp = calloc(num, sizeof(puyos_t));
+        for (int i = 0; i < template->num_colors; ++i) {
+            temp[assignments[i]] |= template->floor[i];
+        }
+        int new_chain = resolve_bottom(temp, num, NULL);
+        free(temp);
+        return new_chain >= template->num_links;
+    }
+    for (int i = 0; i < num; ++i) {
+        assignments[index] = i;
+        int valid = _assign(template, assignments, index + 1, num);
+        if (valid) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+int* minimum_assignments(bottom_template *template, int *min_colors) {
+    int *assignments = malloc(template->num_colors * sizeof(int));
+    for (int num = 1; num <= template->num_colors; ++num) {
+        assignments[0] = 0;
+        if (_assign(template, assignments, 1, num)) {
+            *min_colors = num;
+            return assignments;
+        }
+    }
+    free(assignments);
+    return NULL;
+}
+
+state* state_from_bottom(bottom_template *template) {
+    assert(template->conflicts);
+    state *s= calloc(1, sizeof(state));
+    if (!template->num_colors) {
+        return s;
+    }
+    int num = template->num_colors;
+    int *assignments = minimum_assignments(template, &num);
+    if (num > NUM_COLORS - 1) {
+        free(assignments);
+        return NULL;
+    }
+    for (int i = 0; i < template->num_colors; ++i) {
+        s->floors[1][assignments[i]] |= template->floor[i];
+    }
+    free(assignments);
+    return s;
 }
 
 unsigned char find_trigger(state *s, puyos_t *out) {

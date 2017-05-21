@@ -363,70 +363,16 @@ void init_all() {
 int main() {
     init_all();
 
-    int least_conflicts = 100000000;
-    int chain = 13;
-    while (1) {
-        bottom_template *t = calloc(1, sizeof(bottom_template));
-        // int num_links = 4;
-        // t->floor = bottom_chain_of_fours(num_links);
-        // t->num_colors = num_links;
-        int num_links = 0;
-        for (int i = num_links; i < chain; ++i) {
-            if (!extend_bottom_chain(t)) {
-                num_links = -1;
-                break;
-            }
-        }
-        for (int i = 0; i < t->num_colors; ++i) {
-            if (t->floor[i] & TOP) {
-                num_links = -1;
-                break;
-            }
-        }
-        if (num_links < 0) {
-            free(t->floor);
-            free(t);
-            continue;
-        }
-        assert(t->num_colors == chain);
-        sprinkle_bottom(t);
-        t->conflicts = color_conflicts(t->floor, t->num_colors);
-
-        int most_conflicts = 0;
-        for (int i = 0; i < t->num_colors; ++i) {
-            int num_conflicts = 0;
-            for (int j = 0; j  < t->num_colors; ++j) {
-                num_conflicts += t->conflicts[i + j * t->num_colors];
-            }
-            if (num_conflicts > most_conflicts) {
-                most_conflicts = num_conflicts;
-            }
-        }
-
-        if (most_conflicts < least_conflicts) {
-            least_conflicts = most_conflicts;
-
-            print_bottom(t->floor, t->num_colors);
-            printf("conflicts=%d\n", least_conflicts);
-            printf("  ");
-            for (int i = 0; i < t->num_colors; ++i) {
-                printf("%02d", i);
-            }
-            printf("\n");
-            for (int i = 0; i < t->num_colors; ++i) {
-                printf("%02d ", i);
-                for (int j = 0; j < t->num_colors; ++j) {
-                    if (t->conflicts[i + j * t->num_colors]) {
-                        printf("@ ");
-                    } else {
-                        printf("  ");
-                    }
-                }
-                printf("\n");
-            }
-        }
-        free(t->floor);
-        free(t->conflicts);
-        free(t);
+    int num_links = 5;
+    bottom_template *t = bottom_chain_of_fours(num_links);
+    for (int i = 0; i < 4; ++i) {
+        extend_bottom_chain(t);
     }
+    sprinkle_bottom(t);
+    t->conflicts = color_conflicts(t->floor, t->num_colors);
+    print_bottom(t->floor, t->num_colors);
+    state *s = state_from_bottom(t);
+    print_state(s);
+    print_state(s);
+    animate(s, redraw_state);
 }
