@@ -95,6 +95,23 @@ void jkiss_init() {
     jkiss64_init(&global_gen64);
 }
 
+void jkiss_seed(unsigned int seed) {
+    global_gen32 = (jkiss32){seed, seed*seed, seed*seed*seed, seed ^ (seed >> 11)};
+    for (int i = 0; i < 100; ++i) {
+        jkiss32_step(&global_gen32);
+    }
+    global_gen64 = (jkiss64){
+        jkiss32_step(&global_gen32),
+        jkiss32_step(&global_gen32),
+        jkiss32_step(&global_gen32),
+        jkiss32_step(&global_gen32),
+        jkiss32_step(&global_gen32),
+        jkiss32_step(&global_gen32)
+    };
+    global_gen64.x = global_gen64.x << 32 | jkiss32_step(&global_gen32);
+    global_gen64.y = global_gen64.y << 32 | jkiss32_step(&global_gen32);
+}
+
 unsigned int jrand() {
     return jkiss64_step(&global_gen64);
 }
