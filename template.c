@@ -41,6 +41,7 @@ typedef struct template_result
 typedef struct bottom_template
 {
     puyos_t *floor;
+    puyos_t trigger_front;
     int num_links;
     int num_colors;
     char *conflicts;
@@ -365,8 +366,12 @@ double bottom_match_score(state *s, bottom_template *template) {
             }
         }
     }
+    double penalty = 0.0;
+    penalty += popcount(on_single_conflicts) * 0.95;
+    penalty += num_color_conflicts * 0.97;
+    penalty += popcount(all & template->trigger_front) * 0.123;
     free(assignments);
-    return popcount(on_chain) / (double)popcount(chain);
+    return popcount(on_chain) / (double)popcount(chain) - penalty;
 }
 
 int cut_bottom_trigger(bottom_template *template) {
@@ -387,6 +392,7 @@ int cut_bottom_trigger(bottom_template *template) {
                 for (int j = template->num_links; j < template->num_colors; ++j) {
                     floor[j] &= ~p;
                 }
+                template->trigger_front |= p;
                 success = 1;
             }
         }
