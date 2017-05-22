@@ -1,3 +1,14 @@
+char color_label(int color) {
+    int c = '0' + color;
+    if (c > '9') {
+        c = c - '9' + 'a' - 1;
+    }
+    if (c > 'z') {
+        c = c - 'z' + 'A' - 1;
+    }
+    return c;
+}
+
 void print_bottom(puyos_t *floor, int num_colors) {
     printf(" ");
     for (int i = 0; i < WIDTH; ++i) {
@@ -13,14 +24,7 @@ void print_bottom(puyos_t *floor, int num_colors) {
         for (int k = 0; k < num_colors; ++k) {
             if (p & floor[k]) {
                 printf("\x1b[3%d;1m", k % 6 + 1);
-                int c = '0' + k;
-                if (c > '9') {
-                    c = c - '9' + 'a' - 1;
-                }
-                if (c > 'z') {
-                    c = c - 'z' + 'A' - 1;
-                }
-                printf(" %c", c);
+                printf(" %c", color_label(k));
                 any  = 1;
                 break;
             }
@@ -111,4 +115,23 @@ char* color_conflicts(puyos_t *floor, int num_colors) {
         }
     }
     return conflicts;
+}
+
+void print_conflicts(char* conflicts, int num_colors) {
+    printf(" ");
+    for (int i = 0; i < num_colors; ++i) {
+        printf(" %c", color_label(i));
+    }
+    printf("\n");
+    for (int i = 0; i < num_colors; ++i) {
+        printf("%c", color_label(i));
+        for (int j = 0; j < num_colors; ++j) {
+            if (conflicts[i + j * num_colors]) {
+                printf(" @");
+            } else {
+                printf("  ");
+            }
+        }
+        printf("\n");
+    }
 }
