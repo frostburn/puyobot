@@ -44,6 +44,7 @@ typedef struct bottom_template
     int num_links;
     int num_colors;
     char *conflicts;
+    int score;
 } bottom_template;
 
 
@@ -305,9 +306,8 @@ int* minimum_assignments(bottom_template *template, int *min_colors) {
 
 state* state_from_bottom(bottom_template *template) {
     assert(template->conflicts);
-    state *s= calloc(1, sizeof(state));
     if (!template->num_colors) {
-        return s;
+        return calloc(1, sizeof(state));
     }
     int num = template->num_colors;
     int *assignments = minimum_assignments(template, &num);
@@ -315,6 +315,7 @@ state* state_from_bottom(bottom_template *template) {
         free(assignments);
         return NULL;
     }
+    state *s= calloc(1, sizeof(state));
     for (int i = 0; i < template->num_colors; ++i) {
         s->floors[1][assignments[i]] |= template->floor[i];
     }
@@ -329,35 +330,43 @@ double bottom_match_score(state *s, bottom_template *template) {
     for (int j = 0; j < num_colors; ++j) {
         assignments[j] = -1 - j;
     }
+    puyos_t chain = 0;
+    for (int j = 0; j < template->num_links; ++j) {
+        chain |= template->floor[j];
+    }
     puyos_t *floor = s->floors[1];
-    puyos_t assigned = 0;
-    int num_unassigned = 0;
+    puyos_t all = 0;
+    puyos_t on_chain = 0;
+    puyos_t on_spam = 0;
+    puyos_t on_single_conflicts = 0;
     for (int i = 0; i < NUM_COLORS - 1; ++i) {
-        puyos_t unassigned = floor[i];
+        all |= floor[i];
         for (int j = 0; j < num_colors; ++j) {
-            if (template->floor[j] & floor[i]) {
+            puyos_t overlap = template->floor[j] & floor[i];
+            if (overlap) {
                 if (assignments[j] >= 0) {
-                    free(assignments);
-                    return -1;
+                    on_single_conflicts |= overlap;
+                    continue;
                 }
                 assignments[j] = i;
-                if (j < template->num_links) {
-                    assigned |= template->floor[j] & floor[i];
-                }
-                unassigned &= ~template->floor[j];
+            }
+            if (j < template->num_links) {
+                on_chain |= overlap;
+            } else {
+                on_spam |= overlap;
             }
         }
-        num_unassigned += popcount(unassigned);
     }
+    int num_color_conflicts = 0;
     for (int i = 0; i < num_colors; ++i) {
         for (int j = 0; j < num_colors; ++j) {
             if (assignments[i] == assignments[j] && template->conflicts[i + j * num_colors]) {
-                return 0;
+                num_color_conflicts++;
             }
         }
     }
     free(assignments);
-    return (popcount(assigned) + 1.0) / (num_unassigned + 1.0);
+    return popcount(on_chain) / (double)popcount(chain);
 }
 
 int cut_bottom_trigger(bottom_template *template) {
