@@ -1,8 +1,10 @@
 #define NUM_TETROMINOES (19)
+#define NUM_TRANSLATED_TETROMINOES (725)
+#define NUM_TRANSLATED_TETROMINOES_2 (897)
 #define SHOT_PATIENCE (100000)
 #define CHAIN_PATIENCE (100 * SHOT_PATIENCE)
 
-puyos_t TETROMINOES[NUM_TETROMINOES] = {
+static puyos_t TETROMINOES[NUM_TETROMINOES] = {
     195,  // O
     387, 4290,  // Z
     198, 8385,  // S
@@ -12,7 +14,7 @@ puyos_t TETROMINOES[NUM_TETROMINOES] = {
     263, 449, 4163, 12418,  // J
 };
 
-int TETROMINO_DIMS[NUM_TETROMINOES][2] = {
+static int TETROMINO_DIMS[NUM_TETROMINOES][2] = {
     {2, 2},
     {3, 2}, {2, 3},
     {3, 2}, {2, 3},
@@ -21,6 +23,9 @@ int TETROMINO_DIMS[NUM_TETROMINOES][2] = {
     {3, 2}, {3, 2}, {2, 3}, {2, 3},
     {3, 2}, {3, 2}, {2, 3}, {2, 3},
 };
+
+static puyos_t TRANSLATED_TETROMINOES[NUM_TRANSLATED_TETROMINOES];
+static puyos_t TRANSLATED_TETROMINOES_2[2 * NUM_TRANSLATED_TETROMINOES_2];
 
 typedef struct template_result
 {
@@ -59,6 +64,28 @@ void free_bottom_template(bottom_template *template) {
     free(template->floor);
     free(template->conflicts);
     free(template);
+}
+
+void init_tetrominoes() {
+    int n = 0;
+    for (int i = 0; i < NUM_TETROMINOES; ++i) {
+        for (int j = 0; j <= WIDTH - TETROMINO_DIMS[i][0]; ++j) {
+            for (int k = 0; k <= HEIGHT - TETROMINO_DIMS[i][1]; ++k) {
+                TRANSLATED_TETROMINOES[n++] = TETROMINOES[i] << (j + k * V_SHIFT);
+            }
+        }
+    }
+    n = 0;
+    for (int i = 0; i < NUM_TETROMINOES; ++i) {
+        for (int j = 0; j <= WIDTH - TETROMINO_DIMS[i][0]; ++j) {
+            for (int k = 0; k <= LIFE_HEIGHT - TETROMINO_DIMS[i][1]; ++k) {
+                TRANSLATED_TETROMINOES_2[2*n] = TETROMINOES[i];
+                TRANSLATED_TETROMINOES_2[2*n + 1] = 0;
+                translate_2(TRANSLATED_TETROMINOES_2 + 2*n, j, k + GHOST_Y);
+                ++n;
+            }
+        }
+    }
 }
 
 #include "bottom.c"
@@ -146,20 +173,9 @@ int extend_bottom_chain(bottom_template *template) {
     int chain = resolve_bottom(temp, num_colors, NULL);
     trigger = beam_down(trigger);
 
-    static puyos_t _tetrominoes[725];
-    static int n;
-    if (!_tetrominoes[0]) {
-        n = 0;
-        for (int i = 0; i < NUM_TETROMINOES; ++i) {
-            for (int j = 0; j <= WIDTH - TETROMINO_DIMS[i][0]; ++j) {
-                for (int k = 0; k <= HEIGHT - TETROMINO_DIMS[i][1]; ++k) {
-                    _tetrominoes[n++] = TETROMINOES[i] << (j + k * V_SHIFT);
-                }
-            }
-        }
-    }
+    int n = NUM_TRANSLATED_TETROMINOES;
     puyos_t *tetrominoes = malloc(n * sizeof(puyos_t));
-    memcpy(tetrominoes, _tetrominoes, n * sizeof(puyos_t));
+    memcpy(tetrominoes, TRANSLATED_TETROMINOES, n * sizeof(puyos_t));
     shuffle(tetrominoes, n);
 
     puyos_t *temp2 = malloc((num_colors + 1) * sizeof(puyos_t));
@@ -406,24 +422,9 @@ int extend_chain(state *s, puyos_t *fixed) {
     resolve(c, &chain);
     beam_down_2(trigger);
 
-    static puyos_t _tetrominoes[2 * 897];
-    static int n;
-    if (!_tetrominoes[0]) {
-        n = 0;
-        for (int i = 0; i < NUM_TETROMINOES; ++i) {
-            for (int j = 0; j <= WIDTH - TETROMINO_DIMS[i][0]; ++j) {
-                for (int k = 0; k <= LIFE_HEIGHT - TETROMINO_DIMS[i][1]; ++k) {
-                    _tetrominoes[2*n] = TETROMINOES[i];
-                    _tetrominoes[2*n + 1] = 0;
-                    translate_2(_tetrominoes + 2*n, j, k + GHOST_Y);
-                    ++n;
-
-                }
-            }
-        }
-    }
+    int n = NUM_TRANSLATED_TETROMINOES_2;
     puyos_t *tetrominoes = malloc(2*n * sizeof(puyos_t));
-    memcpy(tetrominoes, _tetrominoes, 2*n * sizeof(puyos_t));
+    memcpy(tetrominoes, TRANSLATED_TETROMINOES_2, 2*n * sizeof(puyos_t));
     shuffle_2(tetrominoes, n);
     puyos_t colors[NUM_COLORS - 1] = {RED, GREEN, YELLOW, BLUE, PURPLE};
     shuffle(colors, NUM_COLORS - 1);

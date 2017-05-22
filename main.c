@@ -358,6 +358,7 @@ void assert_sanity(state *s) {
 
 void init_all() {
     jkiss_init();
+    init_tetrominoes();
 }
 
 int main() {
