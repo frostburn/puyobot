@@ -218,7 +218,7 @@ content_t best_choice(value_node *root) {
 }
 
 choice_branch* choose(value_node *root) {
-    if (!root) {
+    if (!root || root->num_deals == 0) {
         return NULL;
     }
     if (root->num_deals != 1) {
@@ -251,19 +251,19 @@ float eval_fun_zero(state *s) {
 }
 
 float eval_fun_random(state *s) {
-    state *c;
+    state *c = malloc(sizeof(state));
     int total_score = 0;
-    for (int i = 0; i < 10; ++i) {
-        c = copy_state(s);
+    for (int i = 0; i < 20; ++i) {
+        memcpy(c, s, sizeof(state));
         for (int j = 0; j < 25; ++j) {
             if(!apply_deal_and_choice(c, rand_piece(), CHOICES[jrand() % NUM_CHOICES])) {
                 break;
             }
             total_score += resolve(c, NULL);
         }
-        free(c);
     }
-    return total_score * 0.1;
+    free(c);
+    return total_score * 0.05;
 }
 
 float eval_fun_weighted(state *s) {
