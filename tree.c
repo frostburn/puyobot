@@ -170,7 +170,7 @@ float evaluate(state *s, value_node *root, eval_fun f, float tree_value_multipli
     }
     root->value = 0;
     for (num_t j = 0; j < root->num_deals; ++j) {
-        float deal_value = 0;
+        float deal_value = -INFINITY;
         num_t num_best = 0;
         for (num_t k = 0; k < root->deals[j].num_choices; ++k) {
             state *child = copy_state(s);
@@ -294,13 +294,18 @@ float eval_fun_weighted(state *s) {
 }
 
 #define SOLVE_DEBUG (0)
-content_t solve(state *s, content_t *deals, size_t num_deals, size_t depth, eval_fun f, float tree_value_multiplier) {
+value_node* solve_tree(state *s, content_t *deals, size_t num_deals, size_t depth, eval_fun f, float tree_value_multiplier) {
     value_node *root = calloc(1, sizeof(value_node));
     append_deals(root, deals, num_deals);
     for (size_t i = 0; i < depth; ++i) {
         expand(root);
     }
     evaluate(s, root, f, tree_value_multiplier);
+    return root;
+}
+
+content_t solve(state *s, content_t *deals, size_t num_deals, size_t depth, eval_fun f, float tree_value_multiplier) {
+    value_node *root = solve_tree(s, deals, num_deals, depth, f, tree_value_multiplier);
     choice_branch *choice = choose(root);
     content_t action = choice->content;
     if (SOLVE_DEBUG) {
