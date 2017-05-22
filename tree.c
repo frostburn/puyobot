@@ -164,7 +164,7 @@ void expand(value_node *root) {
     }
 }
 
-float evaluate(state *s, value_node *root, eval_fun f) {
+float evaluate(state *s, value_node *root, eval_fun f, float tree_value_multiplier) {
     if (root->num_deals == 0) {
         return f(s);
     }
@@ -177,8 +177,8 @@ float evaluate(state *s, value_node *root, eval_fun f) {
             int legal = apply_deal_and_choice(child, root->deals[j].content, root->deals[j].choices[k].content);
             if (legal) {
                 float current_value = resolve(child, NULL);
-                float future_value = evaluate(child, root->deals[j].choices[k].destination, f);
-                root->deals[j].choices[k].destination->value = current_value + future_value;
+                float future_value = evaluate(child, root->deals[j].choices[k].destination, f, tree_value_multiplier);
+                root->deals[j].choices[k].destination->value = current_value * tree_value_multiplier + future_value;
             } else {
                 root->deals[j].choices[k].destination->value = -DEATH_SCORE;
             }
@@ -294,13 +294,13 @@ float eval_fun_weighted(state *s) {
 }
 
 #define SOLVE_DEBUG (0)
-content_t solve(state *s, content_t *deals, size_t num_deals, size_t depth, eval_fun f) {
+content_t solve(state *s, content_t *deals, size_t num_deals, size_t depth, eval_fun f, float tree_value_multiplier) {
     value_node *root = calloc(1, sizeof(value_node));
     append_deals(root, deals, num_deals);
     for (size_t i = 0; i < depth; ++i) {
         expand(root);
     }
-    evaluate(s, root, f);
+    evaluate(s, root, f, tree_value_multiplier);
     choice_branch *choice = choose(root);
     content_t action = choice->content;
     if (SOLVE_DEBUG) {

@@ -365,13 +365,25 @@ int main() {
     init_all();
 
     bottom_template *t;
-    int num_links = 5;
+    int num_links = 12;
     while (1) {
-        t = bottom_chain_of_fours(num_links);
-        for (int i = 0; i < 0; ++i) {
-            extend_bottom_chain(t);
+        t = bottom_chain_of_fours(1);
+        int i;
+        for (i = 1; i < num_links; ++i) {
+            if (!extend_bottom_chain(t)) {
+                free_bottom_template(t);
+                break;
+            }
         }
-        sprinkle_bottom(t);
+        if (i < num_links) {
+            continue;
+        }
+        t->conflicts = color_conflicts(t->floor, t->num_colors);
+        state *s = state_from_bottom(t);
+        if (!s) {
+            continue;
+        }
+        t->score = resolve(s, NULL);
         if (!cut_bottom_trigger(t)) {
             free_bottom_template(t);
             continue;
@@ -380,11 +392,12 @@ int main() {
         break;
     }
     print_bottom(t->floor, t->num_colors);
+    printf("score=%d\n", t->score);
 
     float eval_template(state *s) {
-        float score = bottom_match_score(s, t);
-        return 1e6 * score;
+        return bottom_match_score(s, t);
     }
 
-    demo(1, 100, &eval_template);
+    demo(0, 1000, &eval_template, 0);
+    return 0;
 }

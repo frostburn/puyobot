@@ -35,7 +35,6 @@ void policy_demo(int do_animation, size_t iterations, policy_fun policy) {
     for (int i = 0; i < iterations; ++i) {
         content_t choice = policy(s, deals, NUM_DEALS);
         if (!apply_deal_and_choice(s, deals[0], choice)) {
-            printf("Game Over\n");
             game_overs++;
             clear_state(s);
         }
@@ -61,9 +60,9 @@ void policy_demo(int do_animation, size_t iterations, policy_fun policy) {
     printf("\nDone\n");
 }
 
-void demo(int do_animation, size_t iterations, eval_fun f) {
+void demo(int do_animation, size_t iterations, eval_fun f, float tree_value_multiplier) {
     content_t policy(state *s, content_t *deals, size_t num_deals) {
-        return solve(s, deals, num_deals, 0, f);
+        return solve(s, deals, num_deals, 0, f, tree_value_multiplier);
     }
     policy_demo(do_animation, iterations, policy);
 }
