@@ -48,7 +48,6 @@ typedef struct bottom_template
     int score;
 } bottom_template;
 
-
 void print_template_result(template_result result) {
     printf(
         "target shots=%d\ntarget chain=%d\nextra shots=%d\nchain=%d\nscore=%d\npuyos remaining=%d\niterations=%zu\n",
@@ -274,13 +273,16 @@ int _assign(bottom_template *template, int *assignments, int index, int num) {
             }
         }
         // Need to double check in case of higher level correlations.
-        puyos_t *temp = calloc(num, sizeof(puyos_t));
+        puyos_t *temp = malloc(template->num_colors * sizeof(puyos_t));
+        memcpy(temp, template->floor, template->num_colors * sizeof(puyos_t));
+        int chain = resolve_bottom(temp, template->num_colors, NULL);
+        memset(temp, 0, template->num_colors * sizeof(puyos_t));
         for (int i = 0; i < template->num_colors; ++i) {
             temp[assignments[i]] |= template->floor[i];
         }
         int new_chain = resolve_bottom(temp, num, NULL);
         free(temp);
-        return new_chain >= template->num_links;
+        return new_chain == chain;
     }
     for (int i = 0; i < num; ++i) {
         assignments[index] = i;
@@ -371,7 +373,7 @@ double bottom_match_score(state *s, bottom_template *template) {
     penalty += num_color_conflicts * 0.97;
     penalty += popcount(all & template->trigger_front) * 0.123;
     free(assignments);
-    return popcount(on_chain) / (double)popcount(chain) - penalty;
+    return popcount(on_chain) / (double)popcount(chain);
 }
 
 int cut_bottom_trigger(bottom_template *template) {
