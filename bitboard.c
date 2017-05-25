@@ -66,7 +66,7 @@ puyos_t cross(puyos_t puyos) {
         ((puyos << H_SHIFT) & RIGHT_BLOCK) |
         (puyos << V_SHIFT) |
         (puyos >> V_SHIFT)
-    );
+    ) & FULL;
 }
 
 puyos_t beam_up(puyos_t puyos) {
