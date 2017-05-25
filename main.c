@@ -365,17 +365,17 @@ int main() {
     init_all();
 
     bottom_template *t;
-    int num_links = 12;
+    int num_links = 10;
     while (1) {
-        t = bottom_chain_of_fours(1);
+        t = bottom_chain_of_fours(3);
         int i;
-        for (i = 1; i < num_links; ++i) {
+        for (i = 3; i < num_links; ++i) {
             if (!extend_bottom_chain(t)) {
-                free_bottom_template(t);
                 break;
             }
         }
         if (i < num_links) {
+            free_bottom_template(t);
             continue;
         }
         t->conflicts = color_conflicts(t->floor, t->num_colors);
@@ -384,20 +384,49 @@ int main() {
             continue;
         }
         t->score = resolve(s, NULL);
+        sprinkle_bottom(t);
+        free(t->conflicts);
+        t->conflicts = color_conflicts(t->floor, t->num_colors);
         if (!cut_bottom_trigger(t)) {
             free_bottom_template(t);
             continue;
         }
-        t->conflicts = color_conflicts(t->floor, t->num_colors);
         break;
     }
+    print_puyos(t->trigger_front);
     print_bottom(t->floor, t->num_colors);
+    print_conflicts(t->conflicts, t->num_colors);
     printf("score=%d\n", t->score);
 
     float eval_template(state *s) {
-        return bottom_match_score(s, t);
+        bottom_match_result r = match_bottom(s, t);
+        float penalty = 0;
+        penalty += popcount(r.on_spam) * 0.35;
+        penalty += popcount(r.off_template) * 0.49;
+        penalty += (r.on_trigger_front == t->trigger_front) * 0.81;
+        penalty += popcount(r.on_single_conflicts) * 0.87;
+        penalty += r.num_color_conflicts * 0.78;
+        float score = popcount(r.on_chain) / (double)popcount(r.all_chain);
+        score -= penalty;
+        return score;
     }
 
-    demo(0, 1000, &eval_template, 0);
+    content_t template_policy(state *s, content_t *deals, size_t num_deals) {
+        bottom_match_result r = match_bottom(s, t);
+        if (!r.num_color_conflicts && r.on_chain == r.all_chain && (r.on_trigger_front != t->trigger_front)) {
+            return iterate_mc(s, deals, num_deals, 50000, &random_policy);
+        }
+        value_node *root = solve_tree(s, deals, num_deals, 0, &eval_template, 0);
+        float value = root->value;
+        content_t choice = choose(root)->content;
+        free_tree(root);
+        if (value < -10) {
+            return iterate_mc(s, deals, num_deals, 50000, &random_policy);
+        }
+        return choice;
+    }
+
+    state *s = calloc(1, sizeof(state));
+    policy_demo(s, 0, 10000, &template_policy);
     return 0;
 }
