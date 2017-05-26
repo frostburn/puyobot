@@ -233,29 +233,38 @@ int sprinkle_bottom(bottom_template *template) {
     return free_space;
 }
 
+int check_assignments(bottom_template *template, int *assignments) {
+    int num_colors = template->num_colors;
+    for (int i = 0; i < num_colors; ++i) {
+        for (int j = i + 1; j < num_colors; ++j) {
+            if (assignments[i] == assignments[j] && template->conflicts[i + j * num_colors]) {
+                return 0;
+            }
+        }
+    }
+    // Need to double check in case of higher level correlations.
+    puyos_t *temp = malloc(num_colors * sizeof(puyos_t));
+    memcpy(temp, template->floor, num_colors * sizeof(puyos_t));
+    int chain = resolve_bottom(temp, num_colors, NULL);
+    memset(temp, 0, num_colors * sizeof(puyos_t));
+    for (int i = 0; i < num_colors; ++i) {
+        temp[assignments[i]] |= template->floor[i];
+    }
+    int new_chain = resolve_bottom(temp, num_colors, NULL);
+    free(temp);
+    return new_chain == chain;
+}
+
 int _assign(bottom_template *template, int *assignments, int index, int num) {
     int num_colors = template->num_colors;
     if (index >= num_colors) {
-        for (int i = 0; i < num_colors; ++i) {
-            for (int j = i + 1; j < num_colors; ++j) {
-                if (assignments[i] == assignments[j] && template->conflicts[i + j * num_colors]) {
-                    return 0;
-                }
-            }
-        }
-        // Need to double check in case of higher level correlations.
-        puyos_t *temp = malloc(template->num_colors * sizeof(puyos_t));
-        memcpy(temp, template->floor, template->num_colors * sizeof(puyos_t));
-        int chain = resolve_bottom(temp, template->num_colors, NULL);
-        memset(temp, 0, template->num_colors * sizeof(puyos_t));
-        for (int i = 0; i < template->num_colors; ++i) {
-            temp[assignments[i]] |= template->floor[i];
-        }
-        int new_chain = resolve_bottom(temp, num, NULL);
-        free(temp);
-        return new_chain == chain;
+        return check_assignments(template, assignments);
     }
     for (int i = 0; i < num; ++i) {
+        // Short circuit for the most common conflict.
+        if (assignments[index - 1] == i && template->conflicts[index - 1 + i * num_colors]) {
+            continue;
+        }
         assignments[index] = i;
         int valid = _assign(template, assignments, index + 1, num);
         if (valid) {
