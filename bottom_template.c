@@ -136,6 +136,7 @@ int extend_bottom_chain(bottom_template *template, puyos_t fixed) {
     shuffle(tetrominoes, n);
 
     puyos_t *temp2 = malloc((num_colors + 1) * sizeof(puyos_t));
+    int *color_order = malloc((num_colors + 1) * sizeof(int));
     for (int i = 0; i < n; ++i) {
         if (beam_up(tetrominoes[i]) & fixed) {
             continue;
@@ -154,10 +155,19 @@ int extend_bottom_chain(bottom_template *template, puyos_t fixed) {
             }
             memcpy(temp2 + 1, temp, num_colors * sizeof(puyos_t));
             temp2[0] = tetromino;
-            int new_chain = resolve_bottom(temp2, num_colors + 1, NULL);
+            int new_chain = resolve_bottom(temp2, num_colors + 1, color_order);
+            if (fixed && color_order[0] != 0) {
+                continue;  // Fixed chains require the new material to become the trigger.
+            }
             if (new_chain > chain) {
-                memcpy(temp2 + 1, temp, num_colors * sizeof(puyos_t));
-                temp2[0] = tetromino;
+                for (int i = 0; i < num_colors + 1; ++i) {
+                    int j = color_order[i] - 1;
+                    if (j >= 0) {
+                        temp2[i] = temp[j];
+                    } else {
+                        temp2[i] = tetromino;
+                    }
+                }
                 handle_bottom_gravity(temp2, num_colors + 1);
                 free(template->floor);
                 template->floor = temp2;
@@ -165,6 +175,7 @@ int extend_bottom_chain(bottom_template *template, puyos_t fixed) {
                 template->num_links = new_chain;
                 free(tetrominoes);
                 free(temp);
+                free(color_order);
                 return 1;
             }
 
@@ -173,6 +184,7 @@ int extend_bottom_chain(bottom_template *template, puyos_t fixed) {
     free(temp);
     free(tetrominoes);
     free(temp2);
+    free(color_order);
     return 0;
 }
 
