@@ -188,6 +188,60 @@ int extend_bottom_chain(bottom_template *template, puyos_t fixed) {
     return 0;
 }
 
+int tail_bottom_chain(bottom_template *template) {
+    int num_colors = template->num_colors;
+    puyos_t *floor = template->floor;
+    if (!num_colors) {
+        return extend_bottom_chain(template, 0);
+    }
+    puyos_t all = 0;
+    for (int i = 0; i < template->num_colors; ++i) {
+        all |= floor[i];
+    }
+
+    puyos_t *temp = malloc((num_colors + 1) * sizeof(puyos_t));
+    memcpy(temp, floor, num_colors * sizeof(puyos_t));
+    int chain = resolve_bottom(temp, num_colors, NULL);
+
+    int n = NUM_TRANSLATED_TETROMINOES;
+    puyos_t *tetrominoes = malloc(n * sizeof(puyos_t));
+    memcpy(tetrominoes, TRANSLATED_TETROMINOES, n * sizeof(puyos_t));
+    shuffle(tetrominoes, n);
+
+    int *color_order = malloc((num_colors + 1) * sizeof(int));
+    for (int i = 0; i < n; ++i) {
+        if (!(tetrominoes[i] & all)) {
+            puyos_t tetromino = tetrominoes[i];
+            memcpy(temp + 1, floor, num_colors * sizeof(puyos_t));
+            temp[0] = tetromino;
+            int new_chain = resolve_bottom(temp, num_colors + 1, color_order);
+            if (new_chain > chain) {
+                for (int i = 0; i < num_colors + 1; ++i) {
+                    int j = color_order[i] - 1;
+                    if (j >= 0) {
+                        temp[i] = floor[j];
+                    } else {
+                        temp[i] = tetromino;
+                    }
+                }
+                handle_bottom_gravity(temp, num_colors + 1);
+                free(template->floor);
+                template->floor = temp;
+                ++template->num_colors;
+                template->num_links = new_chain;
+                free(tetrominoes);
+                free(color_order);
+                return 1;
+            }
+
+        }
+    }
+    free(temp);
+    free(tetrominoes);
+    free(color_order);
+    return 0;
+}
+
 int spam_bottom(bottom_template *template) {
     puyos_t *floor = template->floor;
     int num_colors = template->num_colors;
