@@ -188,24 +188,22 @@ int extend_bottom_chain(bottom_template *template, puyos_t fixed) {
     return 0;
 }
 
-int tail_bottom_chain(bottom_template *template) {
+int tail_bottom_chain(bottom_template *template, puyos_t banned) {
     int num_colors = template->num_colors;
     puyos_t *floor = template->floor;
-    if (!num_colors) {
-        return extend_bottom_chain(template, 0);
-    }
     puyos_t all = 0;
     for (int i = 0; i < template->num_colors; ++i) {
         all |= floor[i];
     }
+    all |= beam_up(banned);
 
     puyos_t *temp = malloc((num_colors + 1) * sizeof(puyos_t));
     memcpy(temp, floor, num_colors * sizeof(puyos_t));
     int chain = resolve_bottom(temp, num_colors, NULL);
 
-    int n = NUM_TRANSLATED_TETROMINOES;
+    int n = NUM_TOP_TETROMINOES;
     puyos_t *tetrominoes = malloc(n * sizeof(puyos_t));
-    memcpy(tetrominoes, TRANSLATED_TETROMINOES, n * sizeof(puyos_t));
+    memcpy(tetrominoes, TOP_TETROMINOES, n * sizeof(puyos_t));
     shuffle(tetrominoes, n);
 
     int *color_order = malloc((num_colors + 1) * sizeof(int));

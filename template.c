@@ -1,4 +1,5 @@
 #define NUM_TETROMINOES (19)
+#define NUM_TOP_TETROMINOES (86)
 #define NUM_TRANSLATED_TETROMINOES (725)
 #define NUM_TRANSLATED_TETROMINOES_2 (897)
 #define SHOT_PATIENCE (100000)
@@ -24,6 +25,7 @@ static int TETROMINO_DIMS[NUM_TETROMINOES][2] = {
     {3, 2}, {3, 2}, {2, 3}, {2, 3},
 };
 
+static puyos_t TOP_TETROMINOES[NUM_TOP_TETROMINOES];
 static puyos_t TRANSLATED_TETROMINOES[NUM_TRANSLATED_TETROMINOES];
 static puyos_t TRANSLATED_TETROMINOES_2[2 * NUM_TRANSLATED_TETROMINOES_2];
 
@@ -55,8 +57,10 @@ void print_template_result(template_result result) {
 
 void init_tetrominoes() {
     int n = 0;
+    int n_top = 0;
     for (int i = 0; i < NUM_TETROMINOES; ++i) {
         for (int j = 0; j <= WIDTH - TETROMINO_DIMS[i][0]; ++j) {
+            TOP_TETROMINOES[n_top++] = TETROMINOES[i] << j;
             for (int k = 0; k <= HEIGHT - TETROMINO_DIMS[i][1]; ++k) {
                 TRANSLATED_TETROMINOES[n++] = TETROMINOES[i] << (j + k * V_SHIFT);
             }
