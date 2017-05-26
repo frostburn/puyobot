@@ -122,8 +122,12 @@ int extend_chain(state *s, puyos_t *fixed) {
     state *cc = malloc(sizeof(state));
     for (int i = 0; i < n; ++i) {
         puyos_t tetromino[2] = {tetrominoes[2*i], tetrominoes[2*i + 1]};
-        if (fixed && ((tetromino[0] & fixed[0]) || (tetromino[1] & fixed[1]))) {
-            continue;
+        if (fixed) {
+            puyos_t lift[2] = {tetromino[0], tetromino[1]};
+            beam_up_2(lift);
+            if ((lift[0] & fixed[0]) || (lift[1] & fixed[1])) {
+                continue;
+            }
         }
         if ((tetromino[0] & trigger[0]) || (tetromino[1] & trigger[1])) {
             puyos_t lifter[2] = {tetromino[0], tetromino[1]};

@@ -179,6 +179,22 @@ void test_chainify() {
     print_state(&s);
 }
 
+void test_extend_chain() {
+    state *s = calloc(1, sizeof(state));
+    s->floors[0][RED] = 1;
+    handle_gravity(s);
+    for (int i = 0; i < CLEAR_THRESHOLD; ++i) {
+        s->floors[0][GREEN] = 1;
+        handle_gravity(s);
+    }
+    for (int i = 0; i < CLEAR_THRESHOLD - 1; ++i) {
+        s->floors[0][RED] = 1;
+        handle_gravity(s);
+    }
+    puyos_t fixed[2] = {s->floors[0][RED], s->floors[1][RED]};
+    assert(!extend_chain(s, fixed));
+}
+
 void test_all() {
     test_lrand();
     test_gravity();
@@ -188,4 +204,5 @@ void test_all() {
     test_euler();
     test_state_euler();
     test_chainify();
+    test_extend_chain();
 }

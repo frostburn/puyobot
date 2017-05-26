@@ -98,7 +98,7 @@ bottom_template* bottom_chain_of_fours(int num_links) {
     return template;
 }
 
-int extend_bottom_chain(bottom_template *template) {
+int extend_bottom_chain(bottom_template *template, puyos_t fixed) {
     int num_colors = template->num_colors;
     puyos_t *floor = template->floor;
     if (!num_colors) {
@@ -137,6 +137,9 @@ int extend_bottom_chain(bottom_template *template) {
 
     puyos_t *temp2 = malloc((num_colors + 1) * sizeof(puyos_t));
     for (int i = 0; i < n; ++i) {
+        if (beam_up(tetrominoes[i]) & fixed) {
+            continue;
+        }
         if (tetrominoes[i] & trigger) {
             puyos_t tetromino = tetrominoes[i];
             puyos_t lifter = tetromino;
