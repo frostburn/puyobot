@@ -99,6 +99,7 @@ bottom_template* bottom_chain_of_fours(int num_links) {
 }
 
 int extend_bottom_chain(bottom_template *template, puyos_t fixed) {
+    assert(!template->trigger_front);
     int num_colors = template->num_colors;
     puyos_t *floor = template->floor;
     if (!num_colors) {
@@ -188,17 +189,17 @@ int extend_bottom_chain(bottom_template *template, puyos_t fixed) {
     return 0;
 }
 
-int tail_bottom_chain(bottom_template *template, puyos_t banned) {
+int tail_bottom_chain(bottom_template *template) {
     int num_colors = template->num_colors;
     puyos_t *floor = template->floor;
     puyos_t all = 0;
     for (int i = 0; i < template->num_colors; ++i) {
         all |= floor[i];
     }
-    all |= beam_up(banned);
 
     puyos_t *temp = malloc((num_colors + 1) * sizeof(puyos_t));
     memcpy(temp, floor, num_colors * sizeof(puyos_t));
+    temp[0] |= template->trigger_front;
     int chain = resolve_bottom(temp, num_colors, NULL);
 
     int n = NUM_TOP_TETROMINOES;
@@ -210,19 +211,28 @@ int tail_bottom_chain(bottom_template *template, puyos_t banned) {
     for (int i = 0; i < n; ++i) {
         if (!(tetrominoes[i] & all)) {
             puyos_t tetromino = tetrominoes[i];
-            memcpy(temp + 1, floor, num_colors * sizeof(puyos_t));
-            temp[0] = tetromino;
+            memcpy(temp, floor, num_colors * sizeof(puyos_t));
+            temp[0] |= template->trigger_front;
+            temp[num_colors] = tetromino;
             int new_chain = resolve_bottom(temp, num_colors + 1, color_order);
             if (new_chain > chain) {
-                for (int i = 0; i < num_colors + 1; ++i) {
-                    int j = color_order[i] - 1;
-                    if (j >= 0) {
+                for (int i = 0; i < new_chain; ++i) {
+                    int j = color_order[i];
+                    if (j < num_colors) {
                         temp[i] = floor[j];
                     } else {
                         temp[i] = tetromino;
                     }
                 }
                 handle_bottom_gravity(temp, num_colors + 1);
+                puyos_t new_front = template->trigger_front;
+                for (int i = 0; i < new_chain; ++i) {
+                    new_front &= ~temp[i];
+                }
+                if (!new_front) {
+                    continue;
+                }
+                template->trigger_front = new_front;
                 free(template->floor);
                 template->floor = temp;
                 ++template->num_colors;
@@ -433,10 +443,11 @@ bottom_match_result match_bottom(state *s, bottom_template *template) {
     };
 }
 
-int cut_bottom_trigger(bottom_template *template) {
+puyos_t cut_bottom_trigger(bottom_template *template) {
     assert(template->num_links > 0);
     puyos_t *floor = template->floor;
 
+    puyos_t cut = 0;
     puyos_t rest = 0;
     for (int j = 1; j < template->num_links; ++j) {
         rest |= floor[j];
@@ -447,7 +458,7 @@ int cut_bottom_trigger(bottom_template *template) {
         if (p & floor[0]) {
             p = beam_up(p);
             if (!(p & rest)) {
-                floor[0] &= ~p;
+                cut |= floor[0] & p;
                 success = 1;
             }
         }
@@ -455,7 +466,8 @@ int cut_bottom_trigger(bottom_template *template) {
     if (!success) {
         return 0;
     }
+    template->floor[0] &= ~cut;
     handle_bottom_gravity(floor, template->num_colors);
     template->trigger_front = cross(floor[0]) & ~(rest | floor[0]);
-    return 1;
+    return cut;
 }
