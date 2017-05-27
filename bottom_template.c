@@ -316,6 +316,7 @@ int spam_bottom(bottom_template *template) {
     for (int i = 0; i < num_colors; ++i) {
         all |= floor[i];
     }
+    all |= beam_up(template->trigger_front);
     int free_space = WIDTH * HEIGHT - popcount(all);
     int j = num_colors;
     template->num_colors += free_space;
@@ -337,6 +338,10 @@ int sprinkle_bottom(bottom_template *template) {
     puyos_t all = 0;
     for (int i = 0; i < num_colors; ++i) {
         all |= floor[i];
+    }
+    if (template->trigger_front) {
+        puyos_t gap = beam_down(template->trigger_front) & ~all;
+        all |= beam_up(template->trigger_front) & ~beam_up(gap);
     }
     int free_space = popcount(TOP & ~all);
     int j = num_colors;
@@ -380,7 +385,11 @@ int _assign(bottom_template *template, int *assignments, int index, int num) {
     if (index >= num_colors) {
         return check_assignments(template, assignments);
     }
-    for (int i = 0; i < num; ++i) {
+    int bound = num;
+    if (index + 1 < bound) {
+        bound = index + 1;
+    }
+    for (int i = 0; i < bound; ++i) {
         // Short circuit for the most common conflict.
         if (assignments[index - 1] == i && template->conflicts[index - 1 + i * num_colors]) {
             continue;
@@ -403,8 +412,7 @@ int* minimum_assignments(bottom_template *template, int *min_colors) {
             return assignments;
         }
     }
-    free(assignments);
-    return NULL;
+    assert(0);
 }
 
 state* state_from_bottom(bottom_template *template) {
