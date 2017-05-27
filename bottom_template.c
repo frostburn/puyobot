@@ -98,6 +98,28 @@ bottom_template* bottom_chain_of_fours(int num_links) {
     return template;
 }
 
+puyos_t _reverse_bottom_cut(puyos_t *floor, puyos_t trigger_front, int num_colors) {
+    if (!trigger_front) {
+        return 0;
+    }
+    puyos_t all = 0;
+    for (int i = 0; i < num_colors; ++i) {
+        all |= floor[i];
+    }
+    puyos_t reverse_cut = trigger_front;
+    reverse_cut &= (all >> V_SHIFT) | BOTTOM;
+    if (!reverse_cut) {
+        // Not enough support. Stretch to bottom to compensate.
+        reverse_cut = beam_down(trigger_front) & ~all;
+    }
+    // If the trigger has been mutilated enough this might loop forever but we don't care for now.
+    while (popcount(floor[0]) + popcount(reverse_cut) < CLEAR_THRESHOLD) {
+        reverse_cut |= reverse_cut >> V_SHIFT;
+    }
+    floor[0] |= reverse_cut;
+    return reverse_cut;
+}
+
 int extend_bottom_chain(bottom_template *template, puyos_t fixed) {
     assert(!template->trigger_front);
     int num_colors = template->num_colors;
@@ -193,14 +215,11 @@ int tail_bottom_chain(bottom_template *template) {
     int num_colors = template->num_colors;
     puyos_t *floor = template->floor;
     puyos_t all = 0;
-    for (int i = 0; i < template->num_colors; ++i) {
+    for (int i = 0; i < num_colors; ++i) {
         all |= floor[i];
     }
 
     puyos_t *temp = malloc((num_colors + 1) * sizeof(puyos_t));
-    memcpy(temp, floor, num_colors * sizeof(puyos_t));
-    temp[0] |= template->trigger_front;
-    int chain = resolve_bottom(temp, num_colors, NULL);
 
     int n = NUM_TOP_TETROMINOES;
     puyos_t *tetrominoes = malloc(n * sizeof(puyos_t));
@@ -212,10 +231,11 @@ int tail_bottom_chain(bottom_template *template) {
         if (!(tetrominoes[i] & all)) {
             puyos_t tetromino = tetrominoes[i];
             memcpy(temp, floor, num_colors * sizeof(puyos_t));
-            temp[0] |= template->trigger_front;
             temp[num_colors] = tetromino;
+            handle_bottom_gravity(temp, num_colors + 1);
+            _reverse_bottom_cut(temp, template->trigger_front, num_colors + 1);
             int new_chain = resolve_bottom(temp, num_colors + 1, color_order);
-            if (new_chain > chain) {
+            if (new_chain > template->num_links) {
                 for (int i = 0; i < new_chain; ++i) {
                     int j = color_order[i];
                     if (j < num_colors) {
@@ -225,14 +245,16 @@ int tail_bottom_chain(bottom_template *template) {
                     }
                 }
                 handle_bottom_gravity(temp, num_colors + 1);
-                puyos_t new_front = template->trigger_front;
-                for (int i = 0; i < new_chain; ++i) {
-                    new_front &= ~temp[i];
+                if (template->trigger_front) {
+                    puyos_t new_front = template->trigger_front;
+                    for (int i = 0; i < new_chain; ++i) {
+                        new_front &= ~temp[i];
+                    }
+                    if (!new_front) {
+                        continue;
+                    }
+                    template->trigger_front = new_front;
                 }
-                if (!new_front) {
-                    continue;
-                }
-                template->trigger_front = new_front;
                 free(template->floor);
                 template->floor = temp;
                 ++template->num_colors;
@@ -470,4 +492,12 @@ puyos_t cut_bottom_trigger(bottom_template *template) {
     handle_bottom_gravity(floor, template->num_colors);
     template->trigger_front = cross(floor[0]) & ~(rest | floor[0]);
     return cut;
+}
+
+puyos_t reverse_bottom_cut(bottom_template *template) {
+    puyos_t reverse_cut = _reverse_bottom_cut(template->floor, template->trigger_front, template->num_colors);
+    if (reverse_cut) {
+        template->trigger_front = 0;
+    }
+    return reverse_cut;
 }

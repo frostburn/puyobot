@@ -1,5 +1,5 @@
 #define NUM_TETROMINOES (19)
-#define NUM_TOP_TETROMINOES (86)
+#define NUM_TOP_TETROMINOES (30)
 #define NUM_TRANSLATED_TETROMINOES (725)
 #define NUM_TRANSLATED_TETROMINOES_2 (897)
 #define SHOT_PATIENCE (100000)
@@ -60,9 +60,11 @@ void init_tetrominoes() {
     int n_top = 0;
     for (int i = 0; i < NUM_TETROMINOES; ++i) {
         for (int j = 0; j <= WIDTH - TETROMINO_DIMS[i][0]; ++j) {
-            TOP_TETROMINOES[n_top++] = TETROMINOES[i] << j;
             for (int k = 0; k <= HEIGHT - TETROMINO_DIMS[i][1]; ++k) {
                 TRANSLATED_TETROMINOES[n++] = TETROMINOES[i] << (j + k * V_SHIFT);
+            }
+            if (i == 0 || i == 5 || i == 7 || i == 9 || i == 11 || i == 15 || i == 17) {
+                TOP_TETROMINOES[n_top++] = TETROMINOES[i] << j;
             }
         }
     }
