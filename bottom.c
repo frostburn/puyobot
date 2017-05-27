@@ -9,7 +9,7 @@ char color_label(int color) {
     return c;
 }
 
-void print_bottom(puyos_t *floor, int num_colors) {
+void print_bottom_spam(puyos_t *floor, int num_links, int num_colors) {
     printf(" ");
     for (int i = 0; i < WIDTH; ++i) {
         printf(" %c", 'A' + i);
@@ -24,7 +24,11 @@ void print_bottom(puyos_t *floor, int num_colors) {
         for (int k = 0; k < num_colors; ++k) {
             if (p & floor[k]) {
                 printf("\x1b[3%d;1m", k % 6 + 1);
-                printf(" %c", color_label(k));
+                if (k < num_links) {
+                    printf(" %c", color_label(k));
+                } else {
+                    printf(" @");
+                }
                 any  = 1;
                 break;
             }
@@ -37,6 +41,10 @@ void print_bottom(puyos_t *floor, int num_colors) {
             printf("\n");
         }
     }
+}
+
+void print_bottom(puyos_t *floor, int num_colors) {
+    print_bottom_spam(floor, num_colors, num_colors);
 }
 
 void handle_bottom_gravity(puyos_t *floor, int num_colors) {
