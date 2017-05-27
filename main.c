@@ -352,6 +352,7 @@ void assert_sanity(state *s) {
 
 #include "tree.c"
 #include "template.c"
+#include "template_gen.c"
 #include "demo.c"
 #include "test.c"
 #include "benchmark.c"
@@ -363,5 +364,28 @@ void init_all() {
 
 int main() {
     init_all();
-    test_all();
+    bottom_template *t;
+    while (1) {
+        t = chain_of_order(5, 1, 0);
+        if (!cut_bottom_trigger(t)) {
+            free_bottom_template(t);
+            continue;
+        }
+        break;
+    }
+    while(tail_bottom_chain(t));
+    reverse_bottom_cut(t);
+
+    t->conflicts = color_conflicts(t->floor, t->num_colors);
+    print_bottom(t->floor, t->num_colors);
+    print_conflicts(t->conflicts, t->num_colors);
+
+    state *s = state_from_bottom(t);
+    if (!s) {
+        printf("Cannot be done in %d colors\n", NUM_COLORS - 1);
+        return 0;
+    }
+    print_state(s);
+    animate(s, redraw_state);
+    return 0;
 }
