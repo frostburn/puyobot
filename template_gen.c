@@ -8,7 +8,7 @@ bottom_template* chain_of_order(int num_links, int order, int force_order) {
                     fixed |= template->floor[j];
                 }
             }
-            if (!extend_bottom_chain(template, fixed)) {
+            if (!extend_bottom_chain(template, fixed, 0)) {
                 break;
             }
             if (order > 0 && force_order) {
@@ -40,7 +40,7 @@ bottom_template* chain_of_order(int num_links, int order, int force_order) {
 bottom_template *any_long_chain(int min_links) {
     bottom_template *template = calloc(1, sizeof(bottom_template));
     do {
-        while(extend_bottom_chain(template, 0));
+        while(extend_bottom_chain(template, 0, 0));
         while(tail_bottom_chain(template));
         if (template->num_links < min_links) {
             free(template->floor);

@@ -120,8 +120,10 @@ puyos_t _reverse_bottom_cut(puyos_t *floor, puyos_t trigger_front, int num_color
     return reverse_cut;
 }
 
-int extend_bottom_chain(bottom_template *template, puyos_t fixed) {
-    assert(!template->trigger_front);
+int extend_bottom_chain(bottom_template *template, puyos_t fixed, int allow_cuts) {
+    if (template->trigger_front) {
+        return 0;
+    }
     int num_colors = template->num_colors;
     puyos_t *floor = template->floor;
     if (!num_colors) {
@@ -177,7 +179,11 @@ int extend_bottom_chain(bottom_template *template, puyos_t fixed) {
                 lifter &= lifter >> V_SHIFT;
             }
             memcpy(temp2 + 1, temp, num_colors * sizeof(puyos_t));
-            temp2[0] = tetromino;
+            if (allow_cuts) {
+                temp2[0] = beam_down(tetromino);
+            } else {
+                temp2[0] = tetromino;
+            }
             int new_chain = resolve_bottom(temp2, num_colors + 1, color_order);
             if (fixed && color_order[0] != 0) {
                 continue;  // Fixed chains require the new material to become the trigger.
@@ -191,7 +197,37 @@ int extend_bottom_chain(bottom_template *template, puyos_t fixed) {
                         temp2[i] = tetromino;
                     }
                 }
+                puyos_t gap = 0;
+                if (allow_cuts) {
+                    puyos_t all = 0;
+                    for (int i = 0; i < num_colors + 1; ++i) {
+                        all |= temp2[i];
+                    }
+                    gap = beam_down(temp2[0]) & ~all;
+                    // We could do a half-assed cut like this, but the full cut bellow is cleaner.
+                    // temp2[0] &= ~beam_up(gap);
+
+                    // Eliminate (some) frivolous gaps where gravity still makes a tetromino.
+                    gap &= ~cross(temp2[0] & ~beam_up(gap));
+                }
                 handle_bottom_gravity(temp2, num_colors + 1);
+                if (gap) {
+                    // Make a full cut
+                    puyos_t rest = 0;
+                    for (int i = 1; i < num_colors + 1; ++i) {
+                        rest |= temp2[i];
+                    }
+                    for (int i = 0; i < WIDTH * HEIGHT; ++i) {
+                        puyos_t p = 1ULL << i;
+                        if (p & temp2[0]) {
+                            p = beam_up(p);
+                            if (!(p & rest)) {
+                                temp2[0] &= ~p;
+                            }
+                        }
+                    }
+                    template->trigger_front = cross(temp2[0]) & ~(temp2[0] | rest);
+                }
                 free(template->floor);
                 template->floor = temp2;
                 ++template->num_colors;

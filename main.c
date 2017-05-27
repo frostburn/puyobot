@@ -364,20 +364,15 @@ void init_all() {
 
 int main() {
     init_all();
-    bottom_template *t;
-    while (1) {
-        t = chain_of_order(5, 1, 0);
-        if (!cut_bottom_trigger(t)) {
-            free_bottom_template(t);
-            continue;
-        }
-        break;
-    }
-    while(tail_bottom_chain(t));
-    reverse_bottom_cut(t);
 
-    t->conflicts = color_conflicts(t->floor, t->num_colors);
+    bottom_template *t = calloc(1, sizeof(bottom_template));
+    while(extend_bottom_chain(t, 0, 1));
+    print_puyos(t->trigger_front);
     print_bottom(t->floor, t->num_colors);
+    if (reverse_bottom_cut(t)) {
+        print_bottom(t->floor, t->num_colors);
+    }
+    t->conflicts = color_conflicts(t->floor, t->num_colors);
     print_conflicts(t->conflicts, t->num_colors);
 
     state *s = state_from_bottom(t);
