@@ -19,6 +19,7 @@ typedef struct bottom_match_result
     puyos_t on_trigger_front;
     puyos_t on_single_conflicts;
     int num_color_conflicts;
+    int num_spam_conflicts;
 } bottom_match_result;
 
 void free_bottom_template(bottom_template *template) {
@@ -43,7 +44,7 @@ void print_bottom_match_result (bottom_match_result result)
     p[1] = result.on_single_conflicts;
     p[2] = result.all_template & ~(p[0] | p[1]);
     print_bottom(p, 3);
-    printf("number of conflicts=%d ", result.num_color_conflicts);
+    printf("number of conflicts=%d+%d ", result.num_color_conflicts, result.num_spam_conflicts);
     printf("legend: 0~trigger front, 1~conflicts, 2~rest of template\n");
 }
 
@@ -339,9 +340,16 @@ int sprinkle_bottom(bottom_template *template) {
     for (int i = 0; i < num_colors; ++i) {
         all |= floor[i];
     }
+    puyos_t front = template->trigger_front;
     if (template->trigger_front) {
-        puyos_t gap = beam_down(template->trigger_front) & ~all;
-        all |= beam_up(template->trigger_front) & ~beam_up(gap);
+        puyos_t gaps = beam_down(front) & ~(all | front);
+        all |= beam_up(front) & ~beam_up(gaps);
+        for (int i = 0; i < WIDTH; ++i) {
+            puyos_t slice = beam_down(1ULL << i) & front;
+            if (popcount(slice) > 1) {
+                all ^= beam_up(slice);
+            }
+        }
     }
     int free_space = popcount(TOP & ~all);
     int j = num_colors;
@@ -437,13 +445,13 @@ state* state_from_bottom(bottom_template *template) {
 bottom_match_result match_bottom(state *s, bottom_template *template) {
     assert(template->conflicts);
     int num_colors = template->num_colors;
+    int num_links = template->num_links;
     int *assignments = malloc(num_colors * sizeof(int));
-    // int *conflicts = calloc(num_colors * sizeof(int));
     for (int j = 0; j < num_colors; ++j) {
         assignments[j] = -1 - j;
     }
     puyos_t chain = 0;
-    for (int j = 0; j < template->num_links; ++j) {
+    for (int j = 0; j < num_links; ++j) {
         chain |= template->floor[j];
     }
     puyos_t *floor = s->floors[1];
@@ -455,7 +463,7 @@ bottom_match_result match_bottom(state *s, bottom_template *template) {
     puyos_t on_single_conflicts = 0;
     for (int j = 0; j < num_colors; ++j) {
         all_template |= template->floor[j];
-        if (j < template->num_links) {
+        if (j < num_links) {
             all_chain |= template->floor[j];
         }
     }
@@ -475,7 +483,7 @@ bottom_match_result match_bottom(state *s, bottom_template *template) {
                 }
                 assignments[j] = i;
             }
-            if (j < template->num_links) {
+            if (j < num_links) {
                 on_chain |= overlap;
             } else {
                 on_spam |= overlap;
@@ -483,12 +491,16 @@ bottom_match_result match_bottom(state *s, bottom_template *template) {
         }
     }
     int num_color_conflicts = 0;
-    for (int i = 0; i < num_colors; ++i) {
+    int num_spam_conflicts = 0;
+    for (int i = 0; i < num_links; ++i) {
         for (int j = i + 1; j < num_colors; ++j) {
             if (assignments[i] == assignments[j] && template->conflicts[i + j * num_colors]) {
-                num_color_conflicts++;
-                // conflicts[i]++;
-                // conflicts[j]++;
+                if (j < num_links) {
+                    num_color_conflicts++;
+                } else {
+                    num_spam_conflicts++;
+                }
+                // spam vs. spam conflicts ignored.
             }
         }
     }
@@ -506,7 +518,31 @@ bottom_match_result match_bottom(state *s, bottom_template *template) {
         .on_trigger_front = on_trigger_front,
         .on_single_conflicts = on_single_conflicts,
         .num_color_conflicts = num_color_conflicts,
+        .num_spam_conflicts = num_spam_conflicts,
     };
+}
+
+float bottom_match_score(bottom_template *template, bottom_match_result result) {
+    float penalty = 0;
+    penalty += result.num_color_conflicts;
+    penalty += 0.5 * result.num_spam_conflicts;
+    if (result.on_trigger_front == template->trigger_front) {
+        penalty += 1.3;
+    }
+
+    float minor_penalty = 0;
+    minor_penalty += 0.05 * popcount(result.off_template);
+    minor_penalty += 0.08 * popcount(result.on_spam);
+    minor_penalty += 0.09 * popcount(result.on_trigger_front) / (float) popcount(template->trigger_front);
+
+    float score = popcount(result.on_chain) / (float) popcount(result.all_chain);
+    score -= minor_penalty;
+
+    if (penalty) {
+        assert(0);
+        return score - penalty - 2;
+    }
+    return score;
 }
 
 puyos_t cut_bottom_trigger(bottom_template *template) {

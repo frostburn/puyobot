@@ -366,12 +366,13 @@ int main() {
     init_all();
 
     bottom_template *t = any_good_chain();
-    print_bottom(t->floor, t->num_colors);
     sprinkle_bottom(t);
     reverse_bottom_cut(t);
     print_bottom(t->floor, t->num_colors);
     t->conflicts = color_conflicts(t->floor, t->num_colors);
     print_conflicts(t->conflicts, t->num_colors);
+    cut_bottom_trigger(t);
+    print_bottom(t->floor, t->num_colors);
 
     state *s = state_from_bottom(t);
     if (!s) {
@@ -379,6 +380,9 @@ int main() {
         return 0;
     }
     print_state(s);
-    animate(s, redraw_state);
+
+    bottom_match_result r = match_bottom(s, t);
+    print_bottom_match_result(r);
+    printf("score=%f\n", bottom_match_score(t, r));
     return 0;
 }
