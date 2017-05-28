@@ -391,7 +391,7 @@ int _assign(bottom_template *template, int *assignments, int index, int num) {
     }
     for (int i = 0; i < bound; ++i) {
         // Short circuit for the most common conflict.
-        if (assignments[index - 1] == i && template->conflicts[index - 1 + i * num_colors]) {
+        if (assignments[index - 1] == i && template->conflicts[index - 1 + index * num_colors]) {
             continue;
         }
         assignments[index] = i;
