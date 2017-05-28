@@ -365,13 +365,11 @@ void init_all() {
 int main() {
     init_all();
 
-    bottom_template *t = calloc(1, sizeof(bottom_template));
-    while(extend_bottom_chain(t, 0, 1));
-    print_puyos(t->trigger_front);
+    bottom_template *t = any_good_chain();
     print_bottom(t->floor, t->num_colors);
-    if (reverse_bottom_cut(t)) {
-        print_bottom(t->floor, t->num_colors);
-    }
+    sprinkle_bottom(t);
+    reverse_bottom_cut(t);
+    print_bottom(t->floor, t->num_colors);
     t->conflicts = color_conflicts(t->floor, t->num_colors);
     print_conflicts(t->conflicts, t->num_colors);
 
