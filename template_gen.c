@@ -55,6 +55,11 @@ bottom_template* any_good_chain() {
     bottom_template *template;
     while (1) {
         template = chain_of_order(6, 1, 0);
+        template->weights = calloc(MAX_BOTTOM_CHAIN, sizeof(float));
+        int base_links = template->num_links;
+        for (int i = 0; i < base_links; ++i) {
+            template->weights[i] = 10 + i;
+        }
         puyos_t fixed = 0;
         for (int i = 2; i < template->num_colors; ++i) {
             fixed |= template->floor[i];
@@ -62,6 +67,10 @@ bottom_template* any_good_chain() {
         for (int i = 0; i < 6; ++i) {
             extend_bottom_chain(template, fixed, 0);
         }
+        for (int i = base_links; i < template->num_links; ++i) {
+            template->weights[i] = 2 + 0.5 *i;
+        }
+        base_links = template->num_links;
         puyos_t cut = cut_bottom_trigger(template);
         if (!cut) {
             free_bottom_template(template);
@@ -71,6 +80,9 @@ bottom_template* any_good_chain() {
         if (template->num_links < 12) {
             free_bottom_template(template);
             continue;
+        }
+        for (int i = base_links; i < template->num_links; ++i) {
+            template->weights[i] = 1 + 0.1 *i;
         }
         break;
     }

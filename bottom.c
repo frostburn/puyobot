@@ -1,3 +1,5 @@
+#define MAX_BOTTOM_CHAIN ((WIDTH * HEIGHT) / CLEAR_THRESHOLD)
+
 char color_label(int color) {
     int c = '0' + color;
     if (c > '9') {

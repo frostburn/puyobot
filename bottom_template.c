@@ -6,6 +6,7 @@ typedef struct bottom_template
     int num_colors;
     char *conflicts;
     int score;
+    float *weights;
 } bottom_template;
 
 typedef struct bottom_match_result
@@ -20,11 +21,13 @@ typedef struct bottom_match_result
     puyos_t on_single_conflicts;
     int num_color_conflicts;
     int num_spam_conflicts;
+    int num_on_top;
 } bottom_match_result;
 
 void free_bottom_template(bottom_template *template) {
     free(template->floor);
     free(template->conflicts);
+    free(template->weights);
     free(template);
 }
 
@@ -38,6 +41,7 @@ void print_bottom_match_result (bottom_match_result result)
     p[2] = result.off_template;
     p[3] = result.all & ~(p[0] | p[1] | p[2]);
     print_bottom(p, 4);
+    printf("number off-screen=%d ", result.num_on_top);
     printf("legend: 0~chain, 1~spam, 2~off template, 3~other\n");
 
     p[0] = result.on_trigger_front;
@@ -508,6 +512,11 @@ bottom_match_result match_bottom(state *s, bottom_template *template) {
 
     puyos_t on_trigger_front = all & template->trigger_front;
 
+    int num_on_top = 0;
+    for (int i = 0; i < NUM_COLORS - 1; ++i) {
+        num_on_top += popcount(s->floors[0][i]);
+    }
+
     return (bottom_match_result) {
         .all = all,
         .all_template = all_template,
@@ -519,12 +528,14 @@ bottom_match_result match_bottom(state *s, bottom_template *template) {
         .on_single_conflicts = on_single_conflicts,
         .num_color_conflicts = num_color_conflicts,
         .num_spam_conflicts = num_spam_conflicts,
+        .num_on_top = num_on_top,
     };
 }
 
 float bottom_match_score(bottom_template *template, bottom_match_result result) {
     float penalty = 0;
-    penalty += result.num_color_conflicts;
+    penalty += 1.2 * result.num_color_conflicts;
+    penalty += popcount(result.on_single_conflicts);
     penalty += 0.5 * result.num_spam_conflicts;
     if (result.on_trigger_front == template->trigger_front) {
         penalty += 1.3;
@@ -534,12 +545,23 @@ float bottom_match_score(bottom_template *template, bottom_match_result result) 
     minor_penalty += 0.05 * popcount(result.off_template);
     minor_penalty += 0.08 * popcount(result.on_spam);
     minor_penalty += 0.09 * popcount(result.on_trigger_front) / (float) popcount(template->trigger_front);
+    minor_penalty += 0.04 * result.num_on_top;
 
-    float score = popcount(result.on_chain) / (float) popcount(result.all_chain);
+    float score;
+    if (!template->weights) {
+        score = popcount(result.on_chain) / (float) popcount(result.all_chain);
+    } else {
+        float weight = 0;
+        float total_mass = 0;
+        for (int i = 0; i < template->num_links; ++i) {
+            weight += popcount(template->floor[i] & result.on_chain) * template->weights[i];
+            total_mass += popcount(template->floor[i]) * template->weights[i];
+        }
+        score = weight / total_mass;
+    }
     score -= minor_penalty;
 
     if (penalty) {
-        assert(0);
         return score - penalty - 2;
     }
     return score;
@@ -580,4 +602,12 @@ puyos_t reverse_bottom_cut(bottom_template *template) {
         template->trigger_front = 0;
     }
     return reverse_cut;
+}
+
+void prepare_bottom_template(bottom_template *template) {
+    assert(template->trigger_front);
+    sprinkle_bottom(template);
+    reverse_bottom_cut(template);
+    template->conflicts = color_conflicts(template->floor, template->num_colors);
+    cut_bottom_trigger(template);
 }

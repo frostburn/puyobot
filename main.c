@@ -365,24 +365,52 @@ void init_all() {
 int main() {
     init_all();
 
-    bottom_template *t = any_good_chain();
-    sprinkle_bottom(t);
-    reverse_bottom_cut(t);
-    print_bottom(t->floor, t->num_colors);
-    t->conflicts = color_conflicts(t->floor, t->num_colors);
-    print_conflicts(t->conflicts, t->num_colors);
-    cut_bottom_trigger(t);
-    print_bottom(t->floor, t->num_colors);
-
-    state *s = state_from_bottom(t);
-    if (!s) {
-        printf("Cannot be done in %d colors\n", NUM_COLORS - 1);
-        return 0;
+    int num_templates = 16;
+    bottom_template **templates = malloc(num_templates * sizeof(bottom_template*));
+    for (int i = 0; i < num_templates; ++i) {
+        bottom_template *t = any_good_chain();
+        prepare_bottom_template(t);
+        print_bottom(t->floor, t->num_colors);
+        templates[i] = t;
     }
-    print_state(s);
 
-    bottom_match_result r = match_bottom(s, t);
-    print_bottom_match_result(r);
-    printf("score=%f\n", bottom_match_score(t, r));
-    return 0;
+    // bottom_match_result r_debug;
+    float eval(state *s) {
+        float best = -2;
+        float good = 0;
+        float bad = 0;
+        int num_good = 0;
+        for (int i = 0; i < num_templates; ++i) {
+            bottom_match_result r = match_bottom(s, templates[i]);
+            float score = bottom_match_score(templates[i], r);
+            if (score > -1) {
+                if (score > best) {
+                    best = score;
+                    // r_debug = r;
+                }
+                good += score;
+                ++num_good;
+            } else {
+                bad += score;
+            }
+        }
+        if (num_good) {
+            return best + 0.05 * (good / num_good);
+        } else {
+            return (good + bad) / num_templates;
+        }
+    }
+
+    content_t policy(state *s, content_t *deals, size_t num_deals) {
+        value_node *root = solve_tree(s, deals, num_deals, 0, eval, 0);
+        float value = root->value;
+        choice_branch *choice = choose(root);
+        content_t action = choice->content;
+        float score = eval(s);
+        // print_bottom_match_result(r_debug);
+        fprintf(stderr, "score=%f -> %f\n", score, value);
+        return action;
+    }
+    state *s = calloc(1, sizeof(state));
+    policy_demo(s, 0, 1000, policy);
 }
