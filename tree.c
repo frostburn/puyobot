@@ -34,8 +34,6 @@ typedef struct choice_branch
     struct value_node *destination;
 } choice_branch;
 
-typedef float (*eval_fun)(state *s);
-
 static content_t ROTATIONS[4] = {
     CHOICE_0, CHOICE_90, CHOICE_180, CHOICE_270,
 };
@@ -105,6 +103,8 @@ int apply_deal_and_choice(state *s, content_t deal, content_t choice) {
     }
     return 1;
 }
+
+#include "eval.c"
 
 // Deterministic deals
 void append_deals(value_node *root, content_t *deals, size_t num_deals) {
@@ -244,53 +244,6 @@ void free_tree(value_node *root) {
     }
     free(root->deals);
     free(root);
-}
-
-float eval_fun_zero(state *s) {
-    return 0;
-}
-
-float eval_fun_random(state *s) {
-    state *c = malloc(sizeof(state));
-    int total_score = 0;
-    for (int i = 0; i < 20; ++i) {
-        memcpy(c, s, sizeof(state));
-        for (int j = 0; j < 25; ++j) {
-            if(!apply_deal_and_choice(c, rand_piece(), CHOICES[jrand() % NUM_CHOICES])) {
-                break;
-            }
-            total_score += resolve(c, NULL);
-        }
-    }
-    free(c);
-    return total_score * 0.05;
-}
-
-float eval_fun_weighted(state *s) {
-    state *c;
-    double total_score = 0;
-    double total_weight = 0;
-    for (int i = 0; i < 10; ++i) {
-        c = copy_state(s);
-        for (int j = 0; j < 25; ++j) {
-            if(!apply_deal_and_choice(c, rand_piece(), CHOICES[jrand() % NUM_CHOICES])) {
-                break;
-            }
-            double score = resolve(c, NULL);
-            int num_remaining = 0;
-            for (int j = 0; j < NUM_FLOORS; ++j) {
-                for (int i = 0; i < NUM_COLORS; ++i) {
-                    num_remaining += popcount(c->floors[j][i]);
-                }
-            }
-            score += 1.5 * exp(-0.3 * num_remaining);
-            double weight = exp(-state_euler(c));
-            total_weight += weight;
-            total_score += score * weight;
-        }
-        free(c);
-    }
-    return total_score / total_weight;
 }
 
 #define SOLVE_DEBUG (0)

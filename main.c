@@ -40,6 +40,8 @@
 #define GARBAGE (5)
 #define CLEAR_THRESHOLD (4)
 
+#define MAX_GROUPS (WIDTH * LIFE_HEIGHT / 2)  // Assuming even width and height
+
 #include "jkiss.c"
 #include "util.c"
 #include "bitboard.c"

@@ -209,7 +209,7 @@ puyos_t drop_once(puyos_t puyos) {
 
 int num_groups(puyos_t puyos) {
     int num = 0;
-    for (int j = 0; j < HEIGHT * WIDTH; j += 2) {
+    for (int j = HEIGHT * WIDTH - 2; j >= 0; j -= 2) {
         puyos_t group = 3ULL << j;
         group = flood(group, puyos);
         if (group) {
@@ -217,6 +217,42 @@ int num_groups(puyos_t puyos) {
             puyos ^= group;
         }
         if (!puyos) {
+            break;
+        }
+    }
+    return num;
+}
+
+int num_groups_2(puyos_t *puyos, int *group_sizes) {
+    puyos_t source[2];
+    puyos_t target[2] = {puyos[0] & LIFE_BLOCK, puyos[1]};
+    int num = 0;
+    for (int j = HEIGHT * WIDTH - 2; j >= (GHOST_Y + 1) * WIDTH; j -= 2) {
+        source[0] = 3ULL << j;
+        source[1] = 0;
+        flood_2(source, target);
+        if (source[0]) {
+            target[0] ^= source[0];
+            target[1] ^= source[1];
+            if (group_sizes) {
+                group_sizes[num] = popcount(source[0]) + popcount(source[1]);
+            }
+            ++num;
+        }
+        if (!target[0]) {
+            break;
+        }
+    }
+    for (int j = HEIGHT * WIDTH - 2; j >= 0; j -= 2) {
+        puyos_t group = flood(3ULL << j, target[1]);
+        if (group) {
+            target[1] ^= group;
+            if (group_sizes) {
+                group_sizes[num] = popcount(group);
+            }
+            ++num;
+        }
+        if (!target[1]) {
             break;
         }
     }
