@@ -27,6 +27,8 @@
 #define LIFE_BLOCK (0xfff000000000000ULL)
 #define LIFE_HEIGHT (12)
 
+#define TOTAL_SPACE (WIDTH * (LIFE_HEIGHT + 1))
+
 #define NUM_FLOORS (2)
 #define TOTAL_HEIGHT (20)
 #define NUM_COLORS (6)
@@ -166,6 +168,16 @@ int state_euler(state *s) {
             bottom_edges = s->floors[i][j] & BOTTOM;
             bottom_vertices = bottom_edges | ((bottom_edges & RIGHT_BLOCK) >> H_SHIFT);
             bottom_corner = bottom_edges & LEFT_WALL;
+        }
+    }
+    return total;
+}
+
+int state_popcount(state *s) {
+    int total = 0;
+    for (int i = 0; i < NUM_FLOORS; ++i) {
+        for (int j = 0; j < NUM_COLORS; ++j) {
+            total += popcount(s->floors[i][j]);
         }
     }
     return total;
