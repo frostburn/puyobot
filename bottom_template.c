@@ -35,14 +35,15 @@ void free_bottom_template(bottom_template *template) {
 
 void print_bottom_match_result (bottom_match_result result)
 {
-    puyos_t p[4];
+    puyos_t p[5];
     p[0] = result.on_chain;
-    p[1] = result.on_spam;
-    p[2] = result.off_template;
-    p[3] = result.all & ~(p[0] | p[1] | p[2]);
-    print_bottom(p, 4);
+    p[1] = result.all_chain ^ result.on_chain;
+    p[2] = result.on_spam;
+    p[3] = result.off_template;
+    p[4] = result.all & ~(p[0] | p[1] | p[2]);
+    print_bottom(p, 5);
     printf("number off-screen=%d ", result.num_on_top);
-    printf("legend: 0~chain, 1~spam, 2~off template, 3~other\n");
+    printf("legend: 0~on chain, 1~chain remaining, 2~spam, 3~off template, 4~other\n");
 
     p[0] = result.on_trigger_front;
     p[1] = result.on_single_conflicts;
