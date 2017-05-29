@@ -16,6 +16,7 @@ typedef struct value_node
     float value;
     struct dealt_node *deals;
     num_t num_deals;
+    unsigned char evaluated;
 } value_node;
 
 typedef struct dealt_node
@@ -127,6 +128,7 @@ void append_deals(value_node *root, content_t *deals, size_t num_deals) {
 
 // Probabilistic deals
 void expand(value_node *root) {
+    root->evaluated = 0;
     if (root->num_deals == 0) {
         root->num_deals = NUM_COLORS - 1 + ((NUM_COLORS - 1) * (NUM_COLORS - 2)) / 2;
         root->deals = calloc(root->num_deals, sizeof(dealt_node));
@@ -165,6 +167,9 @@ void expand(value_node *root) {
 }
 
 float evaluate(state *s, value_node *root, eval_fun f, float tree_value_multiplier) {
+    if (root->evaluated) {
+        return root->value;
+    }
     if (root->num_deals == 0) {
         return f(s);
     }
@@ -199,6 +204,7 @@ float evaluate(state *s, value_node *root, eval_fun f, float tree_value_multipli
         }
         root->value += root->deals[j].probability * deal_value;
     }
+    root->evaluated = 1;
     return root->value;
 }
 
@@ -215,6 +221,33 @@ content_t best_choice(value_node *root) {
         }
     }
     return best_action;
+}
+
+choice_branch** best_choices(value_node *root, int count) {
+    if (root->num_deals != 1) {
+        return NULL;
+    }
+    choice_branch **best = malloc(count * sizeof(choice_branch*));
+    float *best_scores = malloc(count * sizeof(float));
+    for (int i = 0; i < count; ++i) {
+        best_scores[i] = -INFINITY;
+    }
+    for (num_t i = 0; i < root->deals->num_choices; ++i) {
+        choice_branch *choice = root->deals->choices + i;
+        for (int j = 0; j < count; ++j) {
+            if (choice->destination->value > best_scores[j]) {
+                for (int k = count - 2; k >= j; --k) {
+                    best[k + 1] = best[k];
+                    best_scores[k + 1] = best_scores[k];
+                }
+                best[j] = choice;
+                best_scores[j] = choice->destination->value;
+                break;
+            }
+        }
+    }
+    free(best_scores);
+    return best;
 }
 
 choice_branch* choose(value_node *root) {
