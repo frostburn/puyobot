@@ -74,7 +74,7 @@ int clear_bottom_groups(puyos_t *floor, int num_colors, int *color_cleared) {
     int num_cleared = 0;
     for (int i = 0; i < num_colors; ++i) {
         puyos_t bottom = floor[i];
-        for (int j = 0; j < HEIGHT * WIDTH; j += 2) {
+        for (int j = WIDTH * HEIGHT - 2; j >= 0; j -= 2) {
             puyos_t bottom_group = 3ULL << j;
             bottom_group = flood(bottom_group, bottom);
             bottom ^= bottom_group;

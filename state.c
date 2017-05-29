@@ -145,7 +145,7 @@ int clear_groups(state *s, int chain_number) {
     for (int i = 0; i < NUM_COLORS - 1; ++i) {
         puyos_t top[2] = {s->floors[0][i] & LIFE_BLOCK, s->floors[1][i]};
 
-        for (int j = 0; j < HEIGHT * WIDTH; j += 2) {
+        for (int j = HEIGHT * WIDTH - 2; j >= (GHOST_Y + 1) * WIDTH; j -= 2) {
             puyos_t top_group[2] = {3ULL << j, 0};
             flood_2(top_group, top);
             top[0] ^= top_group[0];
@@ -171,7 +171,7 @@ int clear_groups(state *s, int chain_number) {
             }
         }
         puyos_t bottom = s->floors[1][i];
-        for (int j = 0; j < HEIGHT * WIDTH; j += 2) {
+        for (int j = HEIGHT * WIDTH - 2; j >= 0; j -= 2) {
             puyos_t bottom_group = 3ULL << j;
             bottom_group = flood(bottom_group, bottom);
             bottom ^= bottom_group;
