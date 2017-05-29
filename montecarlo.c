@@ -1,10 +1,37 @@
 #include "policy.c"
 
-#define EXPLORATION (5555.55)
-#define TREE_SCORE_FACTOR (0.1)
+#define DEFAULT_EXPLORATION (5555.55)
+#define DEFAULT_TREE_FACTOR (0.1)
+#define DEFAULT_POLICY_FACTOR (1.0)
+#define DEFAULT_STEPS (30)
+#define MC_GAME_OVER (3.14)
 #define MAX_DEPTH (255)
+#define MAX_STEPS (40)
 
-choice_branch* tree_policy(state *s, value_node *root) {
+typedef struct mc_options
+{
+    size_t iterations;
+    size_t num_policy_steps;
+    float exploration;
+    float tree_factor;
+    float policy_factor;
+    policy_fun policy;
+    eval_fun eval;
+} mc_options;
+
+mc_options simple_mc_options(size_t iterations, policy_fun policy) {
+    return (mc_options) {
+        .iterations = iterations,
+        .policy = policy,
+        .num_policy_steps = DEFAULT_STEPS,
+        .exploration = DEFAULT_EXPLORATION,
+        .tree_factor = DEFAULT_TREE_FACTOR,
+        .policy_factor = DEFAULT_POLICY_FACTOR,
+        .eval = eval_fun_zero,
+    };
+}
+
+choice_branch* tree_policy(state *s, value_node *root, mc_options options) {
     if (!root->num_deals) {
         return NULL;
     }
@@ -20,7 +47,7 @@ choice_branch* tree_policy(state *s, value_node *root) {
     for (int j = 0; j < root->deals[i].num_choices; ++j) {
         double value = root->deals[i].choices[j].destination->value;
         double visits = root->deals[i].choices[j].visits + 1;
-        value = value / visits + EXPLORATION * sqrt(log(total_visits) / visits);
+        value = value / visits + options.exploration * sqrt(log(total_visits) / visits);
         if (value > best_value) {
             best_value = value;
             best_branch = root->deals[i].choices + j;
@@ -29,11 +56,12 @@ choice_branch* tree_policy(state *s, value_node *root) {
     if (!apply_deal_and_choice(s, root->deals[i].content, best_branch->content)) {
         best_branch->destination->value -= DEATH_SCORE;
     }
-    best_branch->destination->value += resolve(s, NULL) * TREE_SCORE_FACTOR;
+    best_branch->destination->value += resolve(s, NULL) * options.tree_factor;
     return best_branch;
 }
 
-void eval_mc(state *s, value_node *root, size_t num_deals, policy_fun policy) {
+void eval_mc(state *s, value_node *root, size_t num_deals, mc_options options) {
+    assert(options.num_policy_steps + num_deals < MAX_STEPS);
     choice_branch *path[MAX_DEPTH];
     int path_len = 0;
     choice_branch *leaf = NULL;
@@ -42,7 +70,7 @@ void eval_mc(state *s, value_node *root, size_t num_deals, policy_fun policy) {
         if (leaf) {
             n = leaf->destination;
         }
-        leaf = tree_policy(s, n);
+        leaf = tree_policy(s, n, options);
         path[path_len++] = leaf;
     } while (leaf);
     path_len--;
@@ -53,18 +81,19 @@ void eval_mc(state *s, value_node *root, size_t num_deals, policy_fun policy) {
     }
 
     double score = 0;
-    content_t deals[40];
-    for (int i = 0; i < 40; ++i) {
+    content_t deals[MAX_STEPS];
+    for (int i = 0; i < MAX_STEPS; ++i) {
         deals[i] = rand_piece();
     }
-    for (int i = 0; i < 30; ++i) {
-        content_t choice = policy(s, deals + i, num_deals);
+    for (int i = 0; i < options.num_policy_steps; ++i) {
+        content_t choice = options.policy(s, deals + i, num_deals);
         if (!apply_deal_and_choice(s, deals[i], choice)) {
-            score -= 2;
+            score -= MC_GAME_OVER * options.policy_factor;
             break;
         }
-        score += resolve(s, NULL);
+        score += resolve(s, NULL) * options.policy_factor;
     }
+    score += options.eval(s);
 
     for (int i = 0; i < path_len; ++i) {
         path[i]->visits++;
@@ -90,12 +119,12 @@ content_t greedy_choice(state *s, value_node *root) {
     return best_action;
 }
 
-content_t iterate_mc(state *s, content_t *deals, size_t num_deals, size_t iterations, policy_fun policy) {
+content_t iterate_mc(state *s, content_t *deals, size_t num_deals, mc_options options) {
     value_node *root = calloc(1, sizeof(value_node));
     append_deals(root, deals, num_deals);
-    for (size_t i = 0; i < iterations; ++i) {
+    for (size_t i = 0; i < options.iterations; ++i) {
         state *c = copy_state(s);
-        eval_mc(c, root, num_deals, policy);
+        eval_mc(c, root, num_deals, options);
         free(c);
     }
     content_t choice = greedy_choice(s, root);
