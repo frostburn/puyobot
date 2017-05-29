@@ -3,7 +3,7 @@
 
 void print_deals(content_t *deals, int num_deals) {
     printf("                   \033[A\033[A\033[A");
-    for (int i = 1; i < num_deals; ++i) {
+    for (int i = 0; i < num_deals; ++i) {
         content_t color1 = deal_color1(deals[i]);
         content_t color2 = deal_color2(deals[i]);
         printf("\x1b[3%d;1m ●", color1 + 1);
@@ -25,7 +25,7 @@ void policy_demo(state *s, int do_animation, size_t iterations, policy_fun polic
     }
     void cb(state *s) {
         redraw_state(s);
-        print_deals(deals, 3);
+        print_deals(deals + 1, 2);
         printf("score=%d, max chain=%d, efficiency=%f, game_overs=%d                       \n\033[A", total_score, max_chain, total_score / puyos_played, game_overs);
     }
 
