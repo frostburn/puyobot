@@ -143,33 +143,17 @@ int clear_groups(state *s, int chain_number) {
     int group_bonus = 0;
     unsigned char color_flags = 0;
     for (int i = 0; i < NUM_COLORS - 1; ++i) {
-        puyos_t top = s->floors[0][i] & LIFE_BLOCK;
-        puyos_t bottom = s->floors[1][i];
+        puyos_t top[2] = {s->floors[0][i] & LIFE_BLOCK, s->floors[1][i]};
 
         for (int j = 0; j < HEIGHT * WIDTH; j += 2) {
-            puyos_t top_group = 3ULL << j;
-            puyos_t bottom_group = 0;
-            puyos_t top_extra = 0;
-
-            top_group = flood(top_group, top);
-            top ^= top_group;
-            if (top_group & BOTTOM) {
-                bottom_group = (top_group & BOTTOM) >> TOP_TO_BOTTOM;
-                bottom_group = flood(bottom_group, bottom);
-                bottom ^= bottom_group;
-                if (bottom_group & TOP) {
-                    top_extra = (bottom_group & TOP) << TOP_TO_BOTTOM;
-                    top_extra = flood(top_extra, top);
-                    top ^= top_extra;
-                    top_group |= top_extra;
-                    // XXX: It's not correct to stop here, but we don't care.
-                    // Groups that snake around top and bottom are rare under normal play.
-                }
-            }
-            int group_size = popcount(top_group) + popcount(bottom_group);
+            puyos_t top_group[2] = {3ULL << j, 0};
+            flood_2(top_group, top);
+            top[0] ^= top_group[0];
+            top[1] ^= top_group[1];
+            int group_size = popcount(top_group[0]) + popcount(top_group[1]);
             if (group_size >= CLEAR_THRESHOLD) {
-                s->floors[0][i] ^= top_group;
-                s->floors[1][i] ^= bottom_group;
+                s->floors[0][i] ^= top_group[0];
+                s->floors[1][i] ^= top_group[1];
                 num_cleared += group_size;
 
                 group_size -= CLEAR_THRESHOLD;
@@ -179,13 +163,14 @@ int clear_groups(state *s, int chain_number) {
                 group_bonus += GROUP_BONUS[group_size];
                 color_flags |= 1 << i;
 
-                s->floors[0][GARBAGE] &= ~((cross(top_group) & LIFE_BLOCK) | ((bottom_group & TOP) << TOP_TO_BOTTOM));
-                s->floors[1][GARBAGE] &= ~(cross(bottom_group) | ((top_group & BOTTOM) >> TOP_TO_BOTTOM));
+                s->floors[0][GARBAGE] &= ~((cross(top_group[0]) & LIFE_BLOCK) | ((top_group[1] & TOP) << TOP_TO_BOTTOM));
+                s->floors[1][GARBAGE] &= ~(cross(top_group[1]) | ((top_group[0] & BOTTOM) >> TOP_TO_BOTTOM));
             }
-            if (!top) {
+            if (!top[0]) {
                 break;
             }
         }
+        puyos_t bottom = s->floors[1][i];
         for (int j = 0; j < HEIGHT * WIDTH; j += 2) {
             puyos_t bottom_group = 3ULL << j;
             bottom_group = flood(bottom_group, bottom);
