@@ -48,13 +48,14 @@ float eval_fun_weighted(state *s) {
 }
 
 float eval_fun_groups(state *s) {
-    int group_sizes[MAX_GROUPS];
+    puyos_t groups[2*MAX_GROUPS];
     float score = 0;
     for (int i = 0; i < NUM_COLORS - 1; ++i) {
         puyos_t puyos[2] = {s->floors[0][i], s->floors[1][i]};
-        int num = num_groups_2(puyos, group_sizes);
+        int num = num_groups_2(puyos, groups);
         for (int j = 0; j < num; ++j) {
-            score += group_sizes[j] * group_sizes[j];
+            int size = popcount(groups[2*j]) + popcount(groups[2*j + 1]);
+            score += size*size;
         }
     }
     return score;

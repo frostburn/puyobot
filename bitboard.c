@@ -59,6 +59,22 @@ int popcount(puyos_t puyos) {
     return __builtin_popcountll(puyos);
 }
 
+puyos_t left(puyos_t puyos) {
+    return (puyos  & RIGHT_BLOCK) >> H_SHIFT;
+}
+
+puyos_t right(puyos_t puyos) {
+    return (puyos << H_SHIFT) & RIGHT_BLOCK;
+}
+
+puyos_t up(puyos_t puyos) {
+    return puyos >> V_SHIFT;
+}
+
+puyos_t down(puyos_t puyos) {
+    return (puyos << V_SHIFT) & FULL;
+}
+
 puyos_t cross(puyos_t puyos) {
     return (
         puyos |
@@ -83,6 +99,45 @@ puyos_t beam_down(puyos_t puyos) {
     puyos |= puyos << (4 * V_SHIFT);
     puyos |= puyos << (8 * V_SHIFT);
     return puyos & FULL;
+}
+
+void left_2(puyos_t *puyos) {
+    puyos[0] = left(puyos[0]);
+    puyos[1] = left(puyos[1]);
+}
+
+void right_2(puyos_t *puyos) {
+    puyos[0] = right(puyos[0]);
+    puyos[1] = right(puyos[1]);
+}
+
+void up_2(puyos_t *puyos) {
+    puyos[0] = (puyos[0] >> V_SHIFT) | ((puyos[1] & TOP) << TOP_TO_BOTTOM);
+    puyos[1] = puyos[1] >> V_SHIFT;
+}
+
+void down_2(puyos_t *puyos) {
+    puyos[1] = ((puyos[1] << V_SHIFT) & FULL) | ((puyos[0] & BOTTOM) >> TOP_TO_BOTTOM);
+    puyos[0] = (puyos[0] << V_SHIFT) & FULL;
+}
+
+void cross_2(puyos_t *puyos) {
+    puyos_t temp = puyos[0];
+    puyos[0] |= (
+        ((puyos[0] & RIGHT_BLOCK) >> H_SHIFT) |
+        ((puyos[0] << H_SHIFT) & RIGHT_BLOCK) |
+        (puyos[0] << V_SHIFT) |
+        (puyos[0] >> V_SHIFT) |
+        ((puyos[1] & TOP) << TOP_TO_BOTTOM)
+    ) & FULL;
+
+    puyos[1] |= (
+        ((puyos[1] & RIGHT_BLOCK) >> H_SHIFT) |
+        ((puyos[1] << H_SHIFT) & RIGHT_BLOCK) |
+        (puyos[1] << V_SHIFT) |
+        (puyos[1] >> V_SHIFT) |
+        ((temp & BOTTOM) >> TOP_TO_BOTTOM)
+    ) & FULL;
 }
 
 void beam_up_2(puyos_t *puyos) {
@@ -223,7 +278,7 @@ int num_groups(puyos_t puyos) {
     return num;
 }
 
-int num_groups_2(puyos_t *puyos, int *group_sizes) {
+int num_groups_2(puyos_t *puyos, puyos_t *groups) {
     puyos_t source[2];
     puyos_t target[2] = {puyos[0] & LIFE_BLOCK, puyos[1]};
     int num = 0;
@@ -234,8 +289,9 @@ int num_groups_2(puyos_t *puyos, int *group_sizes) {
         if (source[0]) {
             target[0] ^= source[0];
             target[1] ^= source[1];
-            if (group_sizes) {
-                group_sizes[num] = popcount(source[0]) + popcount(source[1]);
+            if (groups) {
+                groups[2*num] = source[0];
+                groups[2*num + 1] = source[1];
             }
             ++num;
         }
@@ -247,8 +303,9 @@ int num_groups_2(puyos_t *puyos, int *group_sizes) {
         puyos_t group = flood(3ULL << j, target[1]);
         if (group) {
             target[1] ^= group;
-            if (group_sizes) {
-                group_sizes[num] = popcount(group);
+            if (groups) {
+                groups[2*num] = group;
+                groups[2*num + 1] = 0;
             }
             ++num;
         }
