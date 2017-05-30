@@ -101,6 +101,10 @@ puyos_t beam_down(puyos_t puyos) {
     return puyos & FULL;
 }
 
+int popcount_2(puyos_t *puyos) {
+    return __builtin_popcountll(puyos[0]) + __builtin_popcountll(puyos[1]);
+}
+
 void left_2(puyos_t *puyos) {
     puyos[0] = left(puyos[0]);
     puyos[1] = left(puyos[1]);
@@ -180,6 +184,17 @@ void translate_2(puyos_t *puyos, int x, int y) {
     puyos[1] &= FULL;
 }
 
+void point_2(puyos_t *puyos, int x, int y) {
+    if (y < HEIGHT) {
+        puyos[0] = 1ULL << (x + V_SHIFT * y);
+        puyos[1] = 0;
+        return;
+    }
+    y -= HEIGHT;
+    puyos[0] = 0;
+    puyos[1] = 1ULL << (x + V_SHIFT * y);
+}
+
 puyos_t flood(register puyos_t source, register puyos_t target) {
     source &= target;
     if (!source){
@@ -226,6 +241,22 @@ void flood_2(puyos_t *source, puyos_t *target) {
             ((source[0] & BOTTOM) >> TOP_TO_BOTTOM)
         ) & target[1];
     } while (temp[0] != source[0] || temp[1] != source[1]);
+}
+
+int depth_2(puyos_t *puyos, int column) {
+    for (int i = 0; i < HEIGHT; ++i) {
+        puyos_t p = 1ULL << (column + V_SHIFT * i);
+        if (p & puyos[0]) {
+            return i;
+        }
+    }
+    for (int i = 0; i < HEIGHT; ++i) {
+        puyos_t p = 1ULL << (column + V_SHIFT * i);
+        if (p & puyos[1]) {
+            return i + HEIGHT;
+        }
+    }
+    return 2 * HEIGHT;
 }
 
 // Number of (diagonally connected) objects minus the number of holes
@@ -344,7 +375,6 @@ void shuffle_2(puyos_t *array, size_t n) {
         }
     }
 }
-
 
 int has_gap(puyos_t puyos) {
     puyos = beam_up(puyos);
