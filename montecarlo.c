@@ -27,7 +27,7 @@ mc_options simple_mc_options(size_t iterations, policy_fun policy) {
         .exploration = DEFAULT_EXPLORATION,
         .tree_factor = DEFAULT_TREE_FACTOR,
         .policy_factor = DEFAULT_POLICY_FACTOR,
-        .eval = eval_fun_zero,
+        .eval = eval_zero,
     };
 }
 

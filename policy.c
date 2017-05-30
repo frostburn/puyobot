@@ -98,5 +98,24 @@ content_t frog_stacking_policy(state *s, content_t *deals, size_t num_deals) {
 }
 
 content_t group_policy(state *s, content_t *deals, size_t num_deals) {
-    return solve(s, deals, num_deals, 0, eval_fun_groups, 0.05);
+    return solve(s, deals, num_deals, 0, eval_groups, 0.015);
+}
+
+
+float _eval_groups_chains(state *s) {
+    float groups = eval_groups(s);
+    float chains = eval_chains(s);
+    return groups + 20 * chains;
+}
+
+content_t group_chain_policy(state *s, content_t *deals, size_t num_deals) {
+    float factor = 0.0017;
+    float pc = state_popcount(s);
+    if (pc > 50) {
+        factor = 0.03;
+    }
+    if (pc > 68) {
+        factor = 0.1;
+    }
+    return solve(s, deals, num_deals, 0, _eval_groups_chains, factor);
 }

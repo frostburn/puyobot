@@ -1,10 +1,10 @@
 typedef float (*eval_fun)(state *s);
 
-float eval_fun_zero(state *s) {
+float eval_zero(state *s) {
     return 0;
 }
 
-float eval_fun_random(state *s) {
+float eval_random(state *s) {
     state *c = malloc(sizeof(state));
     int total_score = 0;
     for (int i = 0; i < 20; ++i) {
@@ -20,7 +20,7 @@ float eval_fun_random(state *s) {
     return total_score * 0.05;
 }
 
-float eval_fun_weighted(state *s) {
+float eval_weighted(state *s) {
     state *c;
     double total_score = 0;
     double total_weight = 0;
@@ -49,7 +49,7 @@ float eval_fun_weighted(state *s) {
 
 // groups and chains inspired by https://github.com/mbrown1413/Puyo-AI
 
-float eval_fun_groups(state *s) {
+float eval_groups(state *s) {
     puyos_t groups[2*MAX_GROUPS];
     float score = 0;
     for (int i = 0; i < NUM_COLORS - 1; ++i) {
@@ -63,7 +63,7 @@ float eval_fun_groups(state *s) {
     return score;
 }
 
-float eval_fun_chains(state *s) {
+float eval_chains(state *s) {
     int original_pc = state_popcount(s);
     puyos_t all[2];
     get_state_mask(s, all);
@@ -99,7 +99,7 @@ float eval_fun_chains(state *s) {
 }
 
 // XXX: Needs more work
-float eval_fun_groups_plus(state *s) {
+float eval_groups_plus(state *s) {
     puyos_t groups[2*MAX_GROUPS];
     float score = 0;
     for (int i = 0; i < NUM_COLORS - 1; ++i) {
