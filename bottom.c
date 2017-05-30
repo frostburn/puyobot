@@ -49,13 +49,14 @@ void print_bottom(puyos_t *floor, int num_colors) {
     print_bottom_spam(floor, num_colors, num_colors);
 }
 
-void handle_bottom_gravity(puyos_t *floor, int num_colors) {
+int handle_bottom_gravity(puyos_t *floor, int num_colors) {
     puyos_t all;
     all = 0;
     for (int j = 0; j < num_colors; ++j) {
         all |= floor[j];
     }
 
+    int iterations = 0;
     puyos_t temp;
     do {
         temp = all;
@@ -67,7 +68,9 @@ void handle_bottom_gravity(puyos_t *floor, int num_colors) {
             floor[i] = (falling << V_SHIFT) | (floor[i] & ~falling);
             all |= floor[i];
         }
+        ++iterations;
     } while (temp != all);
+    return iterations;
 }
 
 int clear_bottom_groups(puyos_t *floor, int num_colors, int *color_cleared) {
@@ -96,7 +99,10 @@ int resolve_bottom(puyos_t *floor, int num_colors, int *color_order) {
     int chain = -1;
     while(1) {
         ++chain;
-        handle_bottom_gravity(floor, num_colors);
+        int iterations = handle_bottom_gravity(floor, num_colors);
+        if (iterations == 1 && chain > 0) {
+            break;
+        }
         int color_cleared;
         if (!clear_bottom_groups(floor, num_colors, &color_cleared)) {
             break;
