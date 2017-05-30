@@ -150,7 +150,7 @@ int clear_groups(state *s, int chain_number) {
             flood_2(top_group, top);
             top[0] ^= top_group[0];
             top[1] ^= top_group[1];
-            int group_size = popcount(top_group[0]) + popcount(top_group[1]);
+            int group_size = popcount_2(top_group);
             if (group_size >= CLEAR_THRESHOLD) {
                 s->floors[0][i] ^= top_group[0];
                 s->floors[1][i] ^= top_group[1];
@@ -174,6 +174,9 @@ int clear_groups(state *s, int chain_number) {
         for (int j = HEIGHT * WIDTH - 2; j >= 0; j -= 2) {
             puyos_t bottom_group = 3ULL << j;
             bottom_group = flood(bottom_group, bottom);
+            if (!bottom_group) {
+                continue;
+            }
             bottom ^= bottom_group;
             int group_size = popcount(bottom_group);
             if (group_size >= CLEAR_THRESHOLD) {
@@ -209,7 +212,7 @@ int clear_groups(state *s, int chain_number) {
     return (10 * num_cleared) * clear_bonus;
 }
 
-void handle_gravity(state *s) {
+int handle_gravity(state *s) {
     assert(NUM_FLOORS == 2);
     puyos_t all[2];
     for (int i = 0; i < NUM_FLOORS; ++i) {
@@ -219,6 +222,7 @@ void handle_gravity(state *s) {
         }
     }
 
+    int iterations = 0;
     puyos_t temp[2];
     do {
         temp[0] = all[0];
@@ -242,7 +246,9 @@ void handle_gravity(state *s) {
             s->floors[0][i] = (falling << V_SHIFT) | (s->floors[0][i] & ~falling);
             all[0] |= s->floors[0][i];
         }
+        ++iterations;
     } while (temp[0] != all[0] || temp[1] != all[1]);
+    return iterations;
 }
 
 void kill_puyos(state *s) {
@@ -256,7 +262,10 @@ int resolve(state *s, int *chain_out) {
     int total_score = 0;
     while(1) {
         ++chain;
-        handle_gravity(s);
+        int iterations = handle_gravity(s);
+        if (iterations == 1 && chain > 0) {
+            break;
+        }
         kill_puyos(s);
         int score = clear_groups(s, chain);
         if (!score) {
