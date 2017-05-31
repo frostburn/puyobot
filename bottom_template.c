@@ -195,19 +195,19 @@ int extend_bottom_chain(bottom_template *template, puyos_t fixed, int allow_cuts
                 continue;  // Fixed chains require the new material to become the trigger.
             }
             if (new_chain > chain) {
-                for (int i = 0; i < num_colors + 1; ++i) {
-                    int j = color_order[i] - 1;
+                for (int k = 0; k < num_colors + 1; ++k) {
+                    int j = color_order[k] - 1;
                     if (j >= 0) {
-                        temp2[i] = temp[j];
+                        temp2[k] = temp[j];
                     } else {
-                        temp2[i] = tetromino;
+                        temp2[k] = tetromino;
                     }
                 }
                 puyos_t gap = 0;
                 if (allow_cuts) {
                     puyos_t all = 0;
-                    for (int i = 0; i < num_colors + 1; ++i) {
-                        all |= temp2[i];
+                    for (int k = 0; k < num_colors + 1; ++k) {
+                        all |= temp2[k];
                     }
                     gap = beam_down(temp2[0]) & ~all;
                     // We could do a half-assed cut like this, but the full cut bellow is cleaner.
@@ -220,11 +220,11 @@ int extend_bottom_chain(bottom_template *template, puyos_t fixed, int allow_cuts
                 if (gap) {
                     // Make a full cut
                     puyos_t rest = 0;
-                    for (int i = 1; i < num_colors + 1; ++i) {
-                        rest |= temp2[i];
+                    for (int k = 1; k < num_colors + 1; ++k) {
+                        rest |= temp2[k];
                     }
-                    for (int i = 0; i < WIDTH * HEIGHT; ++i) {
-                        puyos_t p = 1ULL << i;
+                    for (int k = 0; k < WIDTH * HEIGHT; ++k) {
+                        puyos_t p = 1ULL << k;
                         if (p & temp2[0]) {
                             p = beam_up(p);
                             if (!(p & rest)) {
@@ -278,19 +278,19 @@ int tail_bottom_chain(bottom_template *template) {
             _reverse_bottom_cut(temp, template->trigger_front, num_colors + 1);
             int new_chain = resolve_bottom(temp, num_colors + 1, color_order);
             if (new_chain > template->num_links) {
-                for (int i = 0; i < new_chain; ++i) {
-                    int j = color_order[i];
+                for (int k = 0; k < new_chain; ++k) {
+                    int j = color_order[k];
                     if (j < num_colors) {
-                        temp[i] = floor[j];
+                        temp[k] = floor[j];
                     } else {
-                        temp[i] = tetromino;
+                        temp[k] = tetromino;
                     }
                 }
                 handle_bottom_gravity(temp, num_colors + 1);
                 if (template->trigger_front) {
                     puyos_t new_front = template->trigger_front;
-                    for (int i = 0; i < new_chain; ++i) {
-                        new_front &= ~temp[i];
+                    for (int k = 0; k < new_chain; ++k) {
+                        new_front &= ~temp[k];
                     }
                     if (!new_front) {
                         continue;
