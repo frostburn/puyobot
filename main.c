@@ -63,29 +63,19 @@ void init_all() {
     init_tetrominoes();
 }
 
-int main() {
+int main(int argc, char *argv[]) {
     init_all();
-
-    mc_options options = simple_mc_options(10000, random_policy);
-    options.step = step_practice;
-    options.copy = copy_practice;
-
-    practice_game *pg = calloc(1, sizeof(practice_game));
-
-    int num_deals = 3;
-    for (int i = 0; i < num_deals; ++i) {
-        append_practice_deal(pg, rand_piece());
+    int min_links = 0;
+    int use_extensions = 1;
+    int use_tailing = 1;
+    if (argc > 1) {
+        min_links = atoi(argv[1]);
     }
-    pg->incoming = WIDTH * 5;
-    pg->delay = 20;
-
-    for (int i = 0; i < 1000; ++i) {
-        content_t choice = iterate_mc(pg, pg->deals, num_deals, options);
-        step_practice(pg, pg->deals[0], choice);
-        print_practice(pg);
-        if (i % 30 == 29) {
-            pg->incoming = WIDTH * 30;
-            pg->delay = 28;
-        }
+    if (argc > 2) {
+        use_extensions = atoi(argv[2]);
     }
+    if (argc > 3) {
+        use_tailing = atoi(argv[3]);
+    }
+    show_chain(min_links, use_extensions, use_tailing);
 }

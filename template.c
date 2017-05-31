@@ -176,6 +176,40 @@ int extend_chain(state *s, puyos_t *fixed) {
     return 0;
 }
 
+int tail_chain(state *s) {
+    state *c = copy_state(s);
+    int chain;
+    resolve(c, &chain);
+
+    int n = NUM_TOP_TETROMINOES;
+    puyos_t *tetrominoes = malloc(n * sizeof(puyos_t));
+    memcpy(tetrominoes, TOP_TETROMINOES, n * sizeof(puyos_t));
+    shuffle(tetrominoes, n);
+
+    puyos_t colors[NUM_COLORS - 1] = {RED, GREEN, YELLOW, BLUE, PURPLE};
+    shuffle(colors, NUM_COLORS - 1);
+
+    for (int i = 0; i < n; ++i) {
+        puyos_t tetromino = tetrominoes[i];
+        for (int j = 0; j < NUM_COLORS - 1; ++j) {
+            memcpy(c, s, sizeof(state));
+            c->floors[0][colors[j]] |= tetromino;
+            int new_chain;
+            resolve(c, &new_chain);
+            if (new_chain > chain) {
+                s->floors[0][colors[j]] |= tetromino;
+                handle_gravity(s);
+                free(c);
+                free(tetrominoes);
+                return 1;
+            }
+        }
+    }
+    free(c);
+    free(tetrominoes);
+    return 0;
+}
+
 template_result _chainify_cleanup(state *s, puyos_t *shots, template_result result) {
     assert(shots[0] || shots[1]);
     state *c = malloc(sizeof(state));

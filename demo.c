@@ -68,3 +68,32 @@ void eval_demo(int do_animation, size_t iterations, eval_fun f, float tree_value
     state *s = calloc(1, sizeof(state));
     policy_demo(s, do_animation, iterations, policy);
 }
+
+size_t show_chain(int min_links, int use_extensions, int use_tailing) {
+    state *s = calloc(1, sizeof(state));
+    size_t iter = 0;
+    int chain;
+    while (1) {
+        ++iter;
+        clear_state(s);
+        chain = 0;
+        if (use_extensions) {
+            while(extend_chain(s, 0)) ++chain;
+        }
+        if (use_tailing) {
+            while(tail_chain(s)) ++chain;
+        }
+        if (chain >= min_links) {
+            break;
+        }
+    }
+    if (iter == 1) {
+        printf("It took 1 iteration to find this %d-chain\n", chain);
+    } else {
+        printf("It took %zu iterations to find this %d-chain\n", iter, chain);
+    }
+    print_state(s);
+    print_state(s);
+    animate(s, redraw_state);
+    return iter;
+}
