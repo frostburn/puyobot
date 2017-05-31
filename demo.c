@@ -62,7 +62,7 @@ void policy_demo(state *s, int do_animation, size_t iterations, policy_fun polic
 }
 
 void eval_demo(int do_animation, size_t iterations, eval_fun f, float tree_value_multiplier) {
-    content_t policy(state *s, content_t *deals, size_t num_deals) {
+    content_t policy(void *s, content_t *deals, int num_deals) {
         return solve(s, deals, num_deals, 0, f, tree_value_multiplier);
     }
     state *s = calloc(1, sizeof(state));

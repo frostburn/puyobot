@@ -1,10 +1,10 @@
-typedef float (*eval_fun)(state *s);
+typedef double (*eval_fun)(void *s);
 
-float eval_zero(state *s) {
+double eval_zero(void *s) {
     return 0;
 }
 
-float eval_random(state *s) {
+double eval_random(void *s) {
     state *c = malloc(sizeof(state));
     int total_score = 0;
     for (int i = 0; i < 20; ++i) {
@@ -20,7 +20,7 @@ float eval_random(state *s) {
     return total_score * 0.05;
 }
 
-float eval_weighted(state *s) {
+double eval_weighted(void *s) {
     state *c;
     double total_score = 0;
     double total_weight = 0;
@@ -49,9 +49,10 @@ float eval_weighted(state *s) {
 
 // groups and chains inspired by https://github.com/mbrown1413/Puyo-AI
 
-float eval_groups(state *s) {
+double eval_groups(void *_s) {
+    state *s = _s;
     puyos_t groups[2*MAX_GROUPS];
-    float score = 0;
+    double score = 0;
     for (int i = 0; i < NUM_COLORS - 1; ++i) {
         puyos_t puyos[2] = {s->floors[0][i], s->floors[1][i]};
         int num = num_groups_2(puyos, groups);
@@ -63,11 +64,12 @@ float eval_groups(state *s) {
     return score;
 }
 
-float eval_chains(state *s) {
+double eval_chains(void *_s) {
+    state *s = _s;
     int original_pc = state_popcount(s);
     puyos_t all[2];
     get_state_mask(s, all);
-    float score = 0;
+    double score = 0;
     state *c = malloc(sizeof(state));
     for (int i = 0; i < NUM_COLORS - 1; ++i) {
         for (int j = 0; j < WIDTH; ++j) {
@@ -89,7 +91,7 @@ float eval_chains(state *s) {
             int chain;
             resolve(c, &chain);
             if (chain > 1) {
-                float pc = state_popcount(c);
+                double pc = state_popcount(c);
                 score += chain * chain * chain / (original_pc - pc);
             }
         }
@@ -99,9 +101,10 @@ float eval_chains(state *s) {
 }
 
 // XXX: Needs more work
-float eval_groups_plus(state *s) {
+double eval_groups_plus(void *_s) {
+    state *s = _s;
     puyos_t groups[2*MAX_GROUPS];
-    float score = 0;
+    double score = 0;
     for (int i = 0; i < NUM_COLORS - 1; ++i) {
         puyos_t puyos[2] = {s->floors[0][i], s->floors[1][i]};
         int num = num_groups_2(puyos, groups);

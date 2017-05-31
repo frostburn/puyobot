@@ -1,10 +1,10 @@
-typedef content_t (*policy_fun)(state *s, content_t*, size_t);
+typedef content_t (*policy_fun)(void *s, content_t*, int);
 
-content_t random_policy(state *s, content_t *deals, size_t num_deals) {
+content_t random_policy(void *s, content_t *deals, int  num_deals) {
     return CHOICES[jrand() % NUM_CHOICES];
 }
 
-content_t euler_policy(state *s, content_t *deals, size_t num_deals) {
+content_t euler_policy(void *s, content_t *deals, int  num_deals) {
     double weights[NUM_CHOICES];
     double total_weight = 0;
     for (int i = 0; i < NUM_CHOICES; ++i) {
@@ -26,12 +26,12 @@ content_t euler_policy(state *s, content_t *deals, size_t num_deals) {
     return 0;
 }
 
-content_t clump_policy(state *s, content_t *deals, size_t num_deals) {
+content_t clump_policy(void *s, content_t *deals, int  num_deals) {
     content_t color1 = deal_color1(deals[0]);
     content_t color2 = deal_color2(deals[0]);
     int color1_score = 1;
     int color2_score = 1;
-    for (size_t i = 1; i < num_deals; ++i) {
+    for (int  i = 1; i < num_deals; ++i) {
         if (deal_color1(deals[i]) == color1) {
             color1_score++;
         }
@@ -70,7 +70,8 @@ content_t clump_policy(state *s, content_t *deals, size_t num_deals) {
     return 0;
 }
 
-content_t frog_stacking_policy(state *s, content_t *deals, size_t num_deals) {
+content_t frog_stacking_policy(void *_s, content_t *deals, int  num_deals) {
+    state *s = (state*) _s;
     int total_left = 0;
     int total_right = 0;
     for (int i = 0; i < NUM_FLOORS; ++i) {
@@ -97,18 +98,18 @@ content_t frog_stacking_policy(state *s, content_t *deals, size_t num_deals) {
     return choice;
 }
 
-content_t group_policy(state *s, content_t *deals, size_t num_deals) {
+content_t group_policy(void *s, content_t *deals, int  num_deals) {
     return solve(s, deals, num_deals, 0, eval_groups, 0.015);
 }
 
 
-float _eval_groups_chains(state *s) {
+double _eval_groups_chains(void *s) {
     float groups = eval_groups(s);
     float chains = eval_chains(s);
     return groups + 20 * chains;
 }
 
-content_t group_chain_policy(state *s, content_t *deals, size_t num_deals) {
+content_t group_chain_policy(void *s, content_t *deals, int  num_deals) {
     float factor = 0.0017;
     float pc = state_popcount(s);
     if (pc > 50) {
