@@ -42,6 +42,8 @@
 
 #define MAX_GROUPS (WIDTH * LIFE_HEIGHT / 2)  // Assuming even width and height
 
+#define MAX_DEALS (5)
+
 #include "jkiss.c"
 #include "util.c"
 #include "bitboard.c"
@@ -51,6 +53,7 @@
 #include "tree.c"
 #include "template.c"
 #include "template_gen.c"
+#include "multiplayer.c"
 #include "demo.c"
 #include "test.c"
 #include "benchmark.c"
@@ -63,52 +66,26 @@ void init_all() {
 int main() {
     init_all();
 
-    int num_templates = 16;
-    bottom_template **templates = malloc(num_templates * sizeof(bottom_template*));
-    for (int i = 0; i < num_templates; ++i) {
-        bottom_template *t = any_good_chain();
-        prepare_bottom_template(t);
-        print_bottom(t->floor, t->num_colors);
-        templates[i] = t;
-    }
+    mc_options options = simple_mc_options(10000, random_policy);
+    options.step = step_practice;
+    options.copy = copy_practice;
 
-    // bottom_match_result r_debug;
-    float eval(state *s) {
-        float best = -2;
-        float good = 0;
-        float bad = 0;
-        int num_good = 0;
-        for (int i = 0; i < num_templates; ++i) {
-            bottom_match_result r = match_bottom(s, templates[i]);
-            float score = bottom_match_score(templates[i], r);
-            if (score > -1) {
-                if (score > best) {
-                    best = score;
-                    // r_debug = r;
-                }
-                good += score;
-                ++num_good;
-            } else {
-                bad += score;
-            }
-        }
-        if (num_good) {
-            return best + 0.05 * (good / num_good);
-        } else {
-            return (good + bad) / num_templates;
+    practice_game *pg = calloc(1, sizeof(practice_game));
+
+    int num_deals = 3;
+    for (int i = 0; i < num_deals; ++i) {
+        append_practice_deal(pg, rand_piece());
+    }
+    pg->incoming = WIDTH * 5;
+    pg->delay = 20;
+
+    for (int i = 0; i < 1000; ++i) {
+        content_t choice = iterate_mc(pg, pg->deals, num_deals, options);
+        step_practice(pg, pg->deals[0], choice);
+        print_practice(pg);
+        if (i % 30 == 29) {
+            pg->incoming = WIDTH * 30;
+            pg->delay = 28;
         }
     }
-
-    content_t policy(state *s, content_t *deals, size_t num_deals) {
-        value_node *root = solve_tree(s, deals, num_deals, 0, eval, 0);
-        float value = root->value;
-        choice_branch *choice = choose(root);
-        content_t action = choice->content;
-        float score = eval(s);
-        // print_bottom_match_result(r_debug);
-        fprintf(stderr, "score=%f -> %f\n", score, value);
-        return action;
-    }
-    state *s = calloc(1, sizeof(state));
-    policy_demo(s, 0, 1000, policy);
 }
