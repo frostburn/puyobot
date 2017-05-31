@@ -59,16 +59,8 @@ bottom_template* bottom_chain_of_fours(int num_links) {
     int *color_order = malloc(num_links * sizeof(int));
     while (1) {
         memset(floor, 0, num_links * sizeof(puyos_t));
-        // Insert the trigger. Always a tetrominoe.
-        // Can be red without loss of generality.
-        // Falls into place so doesn't always end up being the trigger.
-        int i = jrand() % NUM_TETROMINOES;
-        floor[0] |= TETROMINOES[i] << (
-            jrand() % (WIDTH - TETROMINO_DIMS[i][0]) +
-            (jrand() % (HEIGHT - TETROMINO_DIMS[i][1])) * V_SHIFT
-        );
-        puyos_t allowed = FULL ^ floor[0];
-        for (int k = 1; k < num_links; ++k) {
+        puyos_t allowed = FULL;
+        for (int k = 0; k < num_links; ++k) {
             int j = CLEAR_THRESHOLD;
             while (j) {
                 puyos_t p = 1ULL << (jrand() % (WIDTH * HEIGHT));
