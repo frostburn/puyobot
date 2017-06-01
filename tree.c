@@ -1,3 +1,5 @@
+#define NUM_REDUCED_DEALS (NUM_COLORS - 1 + ((NUM_COLORS - 1) * (NUM_COLORS - 2)) / 2)
+
 typedef unsigned char num_t;
 
 typedef struct value_node
@@ -66,7 +68,7 @@ void append_deals(value_node *root, content_t *deals, int num_deals) {
 void expand(value_node *root) {
     root->evaluated = 0;
     if (root->num_deals == 0) {
-        root->num_deals = NUM_COLORS - 1 + ((NUM_COLORS - 1) * (NUM_COLORS - 2)) / 2;
+        root->num_deals = NUM_REDUCED_DEALS;
         root->deals = calloc(root->num_deals, sizeof(dealt_node));
         num_t i = 0;
         for (num_t j = 0; j < NUM_COLORS - 1; ++j) {
@@ -138,6 +140,23 @@ float evaluate(void *s, value_node *root, tree_options options) {
     root->evaluated = 1;
     return root->value;
 }
+
+#ifdef _OPENMP
+    #include <omp.h>
+    // Divide first level evaluation between threads.
+    // The final evaluations are collected later so we ignore them here.
+    void omp_evaluate(void *s, value_node *root, tree_options options) {
+        #pragma omp parallel for collapse(2)
+        for (num_t j = 0; j < root->num_deals; ++j) {
+            for (num_t k = 0; k < root->deals[j].num_choices; ++k) {
+                void *child = options.copy(s);
+                options.step(child, root->deals[j].content, root->deals[j].choices[k].content);
+                evaluate(child, root->deals[j].choices[k].destination, options);
+                free(child);
+            }
+        }
+    }
+#endif
 
 content_t best_choice(value_node *root) {
     if (root->num_deals != 1) {
@@ -216,6 +235,9 @@ value_node* solve_tree(void *s, content_t *deals, int num_deals, tree_options op
     for (int i = 0; i < options.depth; ++i) {
         expand(root);
     }
+    #ifdef _OPENMP
+        omp_evaluate(s, root, options);
+    #endif
     evaluate(s, root, options);
     return root;
 }
