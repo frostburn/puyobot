@@ -8,9 +8,6 @@
 #define MAX_DEPTH (255)
 #define MAX_STEPS (40)
 
-typedef double (*step_fun)(void *s, content_t, content_t);
-typedef void* (*copy_fun)(void *s);
-
 typedef struct mc_options
 {
     copy_fun copy;
@@ -24,23 +21,9 @@ typedef struct mc_options
     float policy_factor;
 } mc_options;
 
-void* mc_copy(void *s) {
-    void *c = copy_state(s);
-    return c;
-}
-
-double state_step(void *s, content_t deal, content_t choice) {
-    int valid = apply_deal_and_choice(s, deal, choice);
-    if (!valid) {
-        clear_state(s);
-        return -DEATH_SCORE;
-    }
-    return resolve(s, NULL);
-}
-
 mc_options simple_mc_options(size_t iterations, policy_fun policy) {
     return (mc_options) {
-        .copy = mc_copy,
+        .copy = state_copy,
         .step = state_step,
         .policy = policy,
         .eval = eval_zero,

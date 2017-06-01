@@ -50,6 +50,8 @@
 #include "scoring.c"
 #include "state.c"
 
+#include "deal.c"
+#include "eval.c"
 #include "tree.c"
 #include "template.c"
 #include "template_gen.c"
@@ -65,17 +67,35 @@ void init_all() {
 
 int main(int argc, char *argv[]) {
     init_all();
-    int min_links = 0;
-    int use_extensions = 1;
-    int use_tailing = 1;
-    if (argc > 1) {
-        min_links = atoi(argv[1]);
+
+    double eval(void *_pg) {
+        practice_game *pg = _pg;
+        state *s = &pg->player.state;
+        double value = _eval_groups_chains(s);
+        value -= (popcount(s->floors[0][GARBAGE]) + popcount(s->floors[1][GARBAGE])) * 20;
+        return value;
     }
-    if (argc > 2) {
-        use_extensions = atoi(argv[2]);
+
+    tree_options options = simple_tree_options(eval, 0, 1);
+    options.step = step_practice;
+    options.copy = copy_practice;
+
+    practice_game *pg = calloc(1, sizeof(practice_game));
+
+    int num_deals = 3;
+    for (int i = 0; i < num_deals; ++i) {
+        append_practice_deal(pg, rand_piece());
     }
-    if (argc > 3) {
-        use_tailing = atoi(argv[3]);
+    pg->incoming = WIDTH * 5;
+    pg->delay = 20;
+
+    for (int i = 0; i < 1000; ++i) {
+        content_t choice = solve(pg, pg->deals, num_deals, options);
+        step_practice(pg, pg->deals[0], choice);
+        print_practice(pg);
+        if (i % 30 == 29) {
+            pg->incoming = WIDTH * 5;
+            pg->delay = 28;
+        }
     }
-    show_chain(min_links, use_extensions, use_tailing);
 }

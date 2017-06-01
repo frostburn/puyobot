@@ -61,9 +61,10 @@ void policy_demo(state *s, int do_animation, size_t iterations, policy_fun polic
     printf("\nDone\n");
 }
 
-void eval_demo(int do_animation, size_t iterations, eval_fun f, float tree_value_multiplier) {
+void eval_demo(int do_animation, size_t iterations, eval_fun eval, float tree_factor) {
     content_t policy(void *s, content_t *deals, int num_deals) {
-        return solve(s, deals, num_deals, 0, f, tree_value_multiplier);
+        tree_options options = simple_tree_options(eval, 0, tree_factor);
+        return solve(s, deals, num_deals, options);
     }
     state *s = calloc(1, sizeof(state));
     policy_demo(s, do_animation, iterations, policy);

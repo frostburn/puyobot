@@ -1,14 +1,3 @@
-#define NUM_CHOICES (22)
-#define CHOICE_0 (0)
-#define CHOICE_90 (64)
-#define CHOICE_180 (128)
-#define CHOICE_270 (192)
-#define CHOICE_X_MASK (0x3f)
-#define COLOR1_MASK (15)
-#define COLOR2_SHIFT (4)
-#define DEATH_SCORE (1e44)
-
-typedef unsigned char content_t;
 typedef unsigned char num_t;
 
 typedef struct value_node
@@ -35,80 +24,27 @@ typedef struct choice_branch
     struct value_node *destination;
 } choice_branch;
 
-static content_t ROTATIONS[4] = {
-    CHOICE_0, CHOICE_90, CHOICE_180, CHOICE_270,
-};
-static content_t CHOICES[NUM_CHOICES] = {
-    0 | CHOICE_0, 1 | CHOICE_0, 2 | CHOICE_0, 3 | CHOICE_0, 4 | CHOICE_0, 5 | CHOICE_0,
-    0 | CHOICE_90, 1 | CHOICE_90, 2 | CHOICE_90, 3 | CHOICE_90, 4 | CHOICE_90,
-    0 | CHOICE_180, 1 | CHOICE_180, 2 | CHOICE_180, 3 | CHOICE_180, 4 | CHOICE_180, 5 | CHOICE_180,
-    0 | CHOICE_270, 1 | CHOICE_270, 2 | CHOICE_270, 3 | CHOICE_270, 4 | CHOICE_270,
-};
+typedef struct tree_options
+{
+    copy_fun copy;
+    step_fun step;
+    eval_fun eval;
+    int depth;
+    float tree_factor;
+} tree_options;
 
-content_t make_piece(content_t color1, content_t color2) {
-    return color1 | (color2 << COLOR2_SHIFT);
+tree_options simple_tree_options(eval_fun eval, int depth, float tree_factor) {
+    return (tree_options) {
+        .copy = state_copy,
+        .step = state_step,
+        .eval = eval,
+        .depth = depth,
+        .tree_factor = tree_factor,
+    };
 }
-
-content_t rand_piece() {
-    return make_piece(jrand() % (NUM_COLORS - 1), jrand() % (NUM_COLORS - 1));
-}
-
-content_t deal_color1(content_t deal) {
-    return deal & COLOR1_MASK;
-}
-
-content_t deal_color2(content_t deal) {
-    return deal >> COLOR2_SHIFT;
-}
-
-content_t rand_choice(content_t min_x, content_t max_x) {
-    content_t rotation = ROTATIONS[jrand() % 4];
-    if (max_x == 5 && (rotation == CHOICE_90 || rotation == CHOICE_270)) {
-        max_x = 4;
-    }
-    return (min_x + (jrand() % (1 + max_x - min_x))) | rotation;
-}
-
-int apply_deal_and_choice(state *s, content_t deal, content_t choice) {
-    content_t color1 = deal & COLOR1_MASK;
-    content_t color2 = deal >> COLOR2_SHIFT;
-    content_t orientation = choice & ~CHOICE_X_MASK;
-    content_t color1_x = choice & CHOICE_X_MASK;
-    content_t color2_x = color1_x;
-    content_t color1_y = 0;
-    content_t color2_y = 1;
-    if (orientation == CHOICE_90) {
-        color2_x++;
-        color2_y--;
-    } else if (orientation == CHOICE_180) {
-        color1_y++;
-        color2_y--;
-    } else if (orientation == CHOICE_270) {
-        color1_x++;
-        color2_y--;
-    }
-    puyos_t all = 0;
-    for (int i = 0; i < NUM_COLORS; ++i) {
-        all |= s->floors[0][i];
-    }
-    puyos_t puyo1 = 1ULL << (color1_x + V_SHIFT * color1_y);
-    s->floors[0][color1] |= puyo1;
-    puyos_t puyo2 = 1ULL << (color2_x + V_SHIFT * color2_y);
-    s->floors[0][color2] |= puyo2;
-
-    if (
-        ((1ULL << (color1_x + V_SHIFT * GHOST_Y)) & all) &&
-        ((1ULL << (color2_x + V_SHIFT * GHOST_Y)) & all)
-    ) {
-        return 0;
-    }
-    return 1;
-}
-
-#include "eval.c"
 
 // Deterministic deals
-void append_deals(value_node *root, content_t *deals, size_t num_deals) {
+void append_deals(value_node *root, content_t *deals, int num_deals) {
     if (!num_deals) {
         return;
     }
@@ -166,27 +102,22 @@ void expand(value_node *root) {
     }
 }
 
-float evaluate(state *s, value_node *root, eval_fun f, float tree_value_multiplier) {
+float evaluate(void *s, value_node *root, tree_options options) {
     if (root->evaluated) {
         return root->value;
     }
     if (root->num_deals == 0) {
-        return f(s);
+        return options.eval(s);
     }
     root->value = 0;
     for (num_t j = 0; j < root->num_deals; ++j) {
         float deal_value = -INFINITY;
         num_t num_best = 0;
         for (num_t k = 0; k < root->deals[j].num_choices; ++k) {
-            state *child = copy_state(s);
-            int legal = apply_deal_and_choice(child, root->deals[j].content, root->deals[j].choices[k].content);
-            if (legal) {
-                float current_value = resolve(child, NULL);
-                float future_value = evaluate(child, root->deals[j].choices[k].destination, f, tree_value_multiplier);
-                root->deals[j].choices[k].destination->value = current_value * tree_value_multiplier + future_value;
-            } else {
-                root->deals[j].choices[k].destination->value = -DEATH_SCORE;
-            }
+            void *child = options.copy(s);
+            double choice_score = options.step(child, root->deals[j].content, root->deals[j].choices[k].content);
+            float future_value = evaluate(child, root->deals[j].choices[k].destination, options);
+            root->deals[j].choices[k].destination->value = choice_score * options.tree_factor + future_value;
             free(child);
             if (root->deals[j].choices[k].destination->value > deal_value) {
                 deal_value = root->deals[j].choices[k].destination->value;
@@ -279,33 +210,20 @@ void free_tree(value_node *root) {
     free(root);
 }
 
-#define SOLVE_DEBUG (0)
-value_node* solve_tree(state *s, content_t *deals, size_t num_deals, size_t depth, eval_fun f, float tree_value_multiplier) {
+value_node* solve_tree(void *s, content_t *deals, int num_deals, tree_options options) {
     value_node *root = calloc(1, sizeof(value_node));
     append_deals(root, deals, num_deals);
-    for (size_t i = 0; i < depth; ++i) {
+    for (int i = 0; i < options.depth; ++i) {
         expand(root);
     }
-    evaluate(s, root, f, tree_value_multiplier);
+    evaluate(s, root, options);
     return root;
 }
 
-content_t solve(state *s, content_t *deals, size_t num_deals, size_t depth, eval_fun f, float tree_value_multiplier) {
-    value_node *root = solve_tree(s, deals, num_deals, depth, f, tree_value_multiplier);
+content_t solve(void *s, content_t *deals, int num_deals, tree_options options) {
+    value_node *root = solve_tree(s, deals, num_deals, options);
     choice_branch *choice = choose(root);
     content_t action = choice->content;
-    if (SOLVE_DEBUG) {
-        state *c = copy_state(s);
-        value_node *r = root;
-        while (r && r->num_deals == 1) {
-            apply_deal_and_choice(c, r->deals->content, choice->content);
-            print_state(c);
-            printf("value=%f\n", r->value);
-            r = choice->destination;
-            resolve(c, NULL);
-            choice = choose(r);
-        }
-    }
     free_tree(root);
     return action;
 }

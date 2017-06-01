@@ -99,7 +99,8 @@ content_t frog_stacking_policy(void *_s, content_t *deals, int  num_deals) {
 }
 
 content_t group_policy(void *s, content_t *deals, int  num_deals) {
-    return solve(s, deals, num_deals, 0, eval_groups, 0.015);
+    tree_options options = simple_tree_options(eval_groups, 0, 0.015);
+    return solve(s, deals, num_deals, options);
 }
 
 
@@ -118,5 +119,6 @@ content_t group_chain_policy(void *s, content_t *deals, int  num_deals) {
     if (pc > 68) {
         factor = 0.1;
     }
-    return solve(s, deals, num_deals, 0, _eval_groups_chains, factor);
+    tree_options options = simple_tree_options(_eval_groups_chains, 0, factor);
+    return solve(s, deals, num_deals, options);
 }
