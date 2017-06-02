@@ -44,6 +44,8 @@
 
 #define MAX_DEALS (5)
 
+static char* COLOR_NAMES[NUM_COLORS] = {"red", "green", "yellow", "blue", "purple", "garbage"};
+
 #include "jkiss.c"
 #include "util.c"
 #include "bitboard.c"
@@ -59,6 +61,7 @@
 #include "demo.c"
 #include "test.c"
 #include "benchmark.c"
+#include "info.c"
 
 void init_all() {
     jkiss_init();
@@ -67,35 +70,52 @@ void init_all() {
 
 int main(int argc, char *argv[]) {
     init_all();
-
-    double eval(void *_pg) {
-        practice_game *pg = _pg;
-        state *s = &pg->player.state;
-        double value = _eval_groups_chains(s);
-        value -= (popcount(s->floors[0][GARBAGE]) + popcount(s->floors[1][GARBAGE])) * 20;
-        return value;
+    for (int i = 0; i < 100; ++i) {
+        printf("\n");
     }
+    printf("Frostbot v0.2-alpha\n\n");
 
-    tree_options options = simple_tree_options(eval, 0, 1);
-    options.step = step_practice;
-    options.copy = copy_practice;
+    FILE *groups_out = fopen("groups.txt", "w");
+    FILE *chains_out = fopen("chains.txt", "w");
+    FILE *value_out = fopen("value.txt", "w");
 
-    practice_game *pg = calloc(1, sizeof(practice_game));
-
-    int num_deals = 3;
-    for (int i = 0; i < num_deals; ++i) {
-        append_practice_deal(pg, rand_piece());
-    }
-    pg->incoming = WIDTH * 5;
-    pg->delay = 20;
-
-    for (int i = 0; i < 1000; ++i) {
-        content_t choice = solve(pg, pg->deals, num_deals, options);
-        step_practice(pg, pg->deals[0], choice);
-        print_practice(pg);
-        if (i % 30 == 29) {
-            pg->incoming = WIDTH * 5;
-            pg->delay = 28;
+    size_t iteration = 0;
+    content_t policy(void *s, content_t *deals, int num_deals) {
+        float factor = 0.0017;
+        float pc = state_popcount(s);
+        if (pc > 50) {
+            factor = 0.03;
         }
+        if (pc > 68) {
+            factor = 0.1;
+        }
+        tree_options options = simple_tree_options(_eval_groups_chains, 1, factor);
+        value_node *root = solve_tree(s, deals, num_deals, options);
+        float value = root->value;
+        choice_branch *choice = choose(root);
+        content_t action = choice->content;
+        free_tree(root);
+
+        ++iteration;
+        fprintf(value_out, "----Turn %zu----\n", iteration);
+        fprintf(groups_out, "----Turn %zu----\n", iteration);
+        fprintf(chains_out, "----Turn %zu----\n", iteration);
+
+        fprintf(value_out, "Tree value=%f\n", value);
+        eval_groups_info(s, groups_out);
+        eval_chains_info(s, chains_out);
+        fflush(value_out);
+        fflush(groups_out);
+        fflush(chains_out);
+
+        return action;
     }
+
+    state* s = calloc(1, sizeof(state));
+    policy_demo(s, 1, 10000, policy);
+
+    fclose(value_out);
+    fclose(groups_out);
+    fclose(chains_out);
+    return 0;
 }
