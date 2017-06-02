@@ -72,8 +72,11 @@ double eval_chains(void *_s) {
     double score = 0;
     state *c = malloc(sizeof(state));
     for (int i = 0; i < NUM_COLORS - 1; ++i) {
+        puyos_t handled[2] = {0};
         for (int j = 0; j < WIDTH; ++j) {
             // Resolution is expensive so we try to short-circuit.
+            // We also filter out chains that we checked previously.
+            // There are some corner cases where the filtering is overaggressive, but they are ignored for now.
             int depth = depth_2(all, j);
             puyos_t p[2];
             point_2(p, j, depth - 1);
@@ -84,6 +87,11 @@ double eval_chains(void *_s) {
             flood_2(p, target);
             if (popcount_2(p) < CLEAR_THRESHOLD) {
                 continue;
+            } else if ((p[0] & handled[0]) || (p[1] & handled[1])) {
+                continue;
+            } else {
+                handled[0] |= p[0];
+                handled[1] |= p[1];
             }
             // Do the actual thing.
             memcpy(c, s, sizeof(state));
@@ -92,7 +100,8 @@ double eval_chains(void *_s) {
             resolve(c, &chain);
             if (chain > 1) {
                 double pc = state_popcount(c);
-                score += chain * chain * chain / (original_pc - pc);
+                double count = original_pc + 1 - pc;
+                score += chain * chain * chain / count;
             }
         }
     }
