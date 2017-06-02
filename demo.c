@@ -26,7 +26,11 @@ void policy_demo(state *s, int do_animation, size_t iterations, policy_fun polic
     void cb(state *s) {
         redraw_state(s);
         print_deals(deals + 1, 2);
-        printf("score=%d, max chain=%d, efficiency=%f, game_overs=%d                       \n\033[A", total_score, max_chain, total_score / puyos_played, game_overs);
+        float efficiency = 0;
+        if (puyos_played) {
+            efficiency = total_score / puyos_played;
+        }
+        printf("score=%d, max chain=%d, efficiency=%f, game_overs=%d           \n\033[A", total_score, max_chain, efficiency, game_overs);
     }
 
     for (int i = 0; i < NUM_DEALS; ++i) {
