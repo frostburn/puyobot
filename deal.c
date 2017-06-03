@@ -38,6 +38,24 @@ content_t deal_color2(content_t deal) {
     return deal >> COLOR2_SHIFT;
 }
 
+content_t make_choice(int *x, int *orientation) {
+    while (*orientation < 0) {
+        *orientation += 4;
+    }
+    *orientation = *orientation % 4;
+    content_t rotation = ROTATIONS[*orientation];
+    int max_x = 5;
+    if (rotation == CHOICE_90 || rotation == CHOICE_270) {
+        max_x = 4;
+    }
+    if (*x < 0) {
+        *x = 0;
+    } else if (*x > max_x) {
+        *x = max_x;
+    }
+    return *x | rotation;
+}
+
 content_t rand_choice(content_t min_x, content_t max_x) {
     content_t rotation = ROTATIONS[jrand() % 4];
     if (max_x == 5 && (rotation == CHOICE_90 || rotation == CHOICE_270)) {
@@ -80,6 +98,12 @@ int apply_deal_and_choice(state *s, content_t deal, content_t choice) {
         return 0;
     }
     return 1;
+}
+
+void clear_deal_and_choice(state *s) {
+    for (int i = 0; i < NUM_COLORS; ++i) {
+        s->floors[0][i] &= ~(TOP | (TOP << V_SHIFT));
+    }
 }
 
 void* state_copy(void *s) {
