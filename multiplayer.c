@@ -9,6 +9,7 @@ typedef struct player
     int chain_score;
     int total_score;
     int all_clear_bonus;
+    int game_overs;
     int pending_nuisance;
     double leftover_nuisance;
 } player;
@@ -18,7 +19,6 @@ typedef struct practice_game
     player player;
     int delay;
     int incoming;
-    int game_overs;
     int num_deals;
     content_t deals[MAX_DEALS];
 } practice_game;
@@ -28,6 +28,7 @@ typedef struct game
     int num_players;
     player *players;
     int num_deals;
+    int total_num_deals;
     content_t *deals;
 } game;
 
@@ -35,17 +36,49 @@ void print_player(player *p) {
     print_state(&p->state);
     int sending = floor(p->chain_score / (double) TARGET_SCORE + p->leftover_nuisance);
     printf(
-        "score=%d chain=%d sending=%d receiving=%d\n",
-        p->total_score, p->chain, sending, p->pending_nuisance
+        "score=%d chain=%d sending=%d receiving=%d all clear=%d game_overs=%d\n",
+        p->total_score, p->chain, sending, p->pending_nuisance, p->all_clear_bonus, p->game_overs
     );
 }
 
 void print_practice(practice_game *pg) {
     print_player(&pg->player);
     printf(
-        "incoming=%d/%d game overs=%d\n",
-        pg->incoming, pg->delay, pg->game_overs
+        "incoming=%d/%d\n",
+        pg->incoming, pg->delay
     );
+}
+
+game* new_game(int num_players, int num_deals) {
+    game *g = calloc(1, sizeof(game));
+    g->num_players = num_players;
+    g->players = calloc(num_players, sizeof(player));
+    g->num_deals = num_deals;
+    g->total_num_deals = 1 << 4;
+    while (g->total_num_deals < num_deals) {
+        g->total_num_deals <<= 1;
+    }
+    g->deals = malloc(g->total_num_deals * sizeof(content_t));
+    for (int i = 0; i < g->total_num_deals; ++i) {
+        g->deals[i] = rand_piece();
+    }
+    return g;
+}
+
+void free_game(game *g) {
+    free(g->players);
+    free(g->deals);
+    free(g);
+}
+
+void clear_player(player *p) {
+    clear_state(&p->state);
+    p->chain = 0;
+    p->chain_score = 0;
+    p->total_score = 0;
+    p->all_clear_bonus = 0;
+    p->pending_nuisance = 0;
+    p->leftover_nuisance = 0;
 }
 
 int handle_nuisance(player *p, int score) {
@@ -116,20 +149,33 @@ void step_game(game *g, content_t *choices) {
         player *p = g->players + i;
         if (p->chain) {
             step_player(p);
-        } else {
+        }
+        if (!p->chain) {
             int valid = apply_deal_and_choice(&p->state, g->deals[p->deal_index], choices[i]);
-            assert(valid);  // TODO: Game over
-            int nuisance = handle_nuisance(p, p->chain_score);
             handle_gravity(&p->state);
+            ++p->deal_index;
+            if (p->deal_index + g->num_deals >= g->total_num_deals) {
+                g->deals = realloc(g->deals, (g->total_num_deals << 1) * sizeof(content_t));
+                for (int i = 0; i < g->total_num_deals; ++i) {
+                    g->deals[g->total_num_deals + i] = rand_piece();
+                }
+                g->total_num_deals <<= 1;
+            }
+            int nuisance = handle_nuisance(p, p->chain_score);
+            p->chain_score = 0;
+            step_player(p);
             if (p->all_clear_bonus) {
                 nuisance += MAX_NUISANCE_ROWS * WIDTH;
                 p->all_clear_bonus = 0;
             }
-            p->chain_score = 0;
             for (int j = 0; j < g->num_players; ++j) {
                 if (j != i) {
-                    g->players[i].pending_nuisance += nuisance;
+                    g->players[j].pending_nuisance += nuisance;
                 }
+            }
+            if (!valid) {
+                clear_player(p);
+                ++p->game_overs;
             }
         }
     }
@@ -169,8 +215,8 @@ double step_practice(void *_pg, content_t deal, content_t choice) {
         pg->delay = 0;
     }
     if (!valid) {
-        ++pg->game_overs;
-        clear_state(&pg->player.state);
+        clear_player(&pg->player);
+        ++pg->player.game_overs;
         score = -DEATH_SCORE;
     }
     append_practice_deal(pg, rand_piece());
