@@ -189,9 +189,9 @@ void* copy_practice(void *pg) {
 
 void append_practice_deal(practice_game *pg, content_t deal) {
     for (int i = 0; i < MAX_DEALS - 1; ++i) {
-        pg->deals[i] = pg->deals[i + i];
+        pg->deals[i] = pg->deals[i + 1];
     }
-    pg->deals[0] = deal;
+    pg->deals[MAX_DEALS - 1] = deal;
 }
 
 double step_practice(void *_pg, content_t deal, content_t choice) {
