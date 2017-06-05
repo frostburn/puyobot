@@ -142,3 +142,30 @@ content_t iterate_mc(void *s, content_t *deals, size_t num_deals, mc_options opt
     free_tree(root);
     return choice;
 }
+
+#ifdef _OPENMP
+    content_t omp_vote_mc(void *s, content_t *deals, size_t num_deals, mc_options options) {
+        int votes[256] = {0};
+        #pragma omp parallel
+        {
+            content_t choice = iterate_mc(s, deals, num_deals, options);
+            #pragma omp critical
+            ++votes[choice];
+        }
+        content_t best_choice = 0;
+        int most_votes = -1;
+        puyos_t indices[256];
+        for (int i = 0; i < 256; ++i) {
+            indices[i] = i;
+        }
+        shuffle(indices, 256);
+        for (int i = 0; i < 256; ++i) {
+            content_t j = indices[i];
+            if (votes[j] > most_votes) {
+                best_choice = j;
+                most_votes = votes[j];
+            }
+        }
+        return best_choice;
+    }
+#endif
