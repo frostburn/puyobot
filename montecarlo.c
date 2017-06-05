@@ -62,26 +62,21 @@ choice_branch* tree_policy(void *s, value_node *root, mc_options options) {
     return best_branch;
 }
 
-void eval_mc(void *s, value_node *root, size_t num_deals, mc_options options) {
-    assert(options.num_policy_steps + num_deals < MAX_STEPS);
-    choice_branch *path[MAX_DEPTH];
+int find_path(void *s, value_node *root, mc_options options, choice_branch **path) {
     int path_len = 0;
-    choice_branch *leaf = NULL;
-    do {
-        value_node *n = root;
+    while (1) {
+        choice_branch *leaf = tree_policy(s, root, options);
         if (leaf) {
-            n = leaf->destination;
+            root = leaf->destination;
+            path[path_len++] = leaf;
+        } else {
+            break;
         }
-        leaf = tree_policy(s, n, options);
-        path[path_len++] = leaf;
-    } while (leaf);
-    path_len--;
-
-    leaf = path[path_len - 1];
-    if (leaf->visits > 3) {
-        expand(leaf->destination);
     }
+    return path_len;
+}
 
+double rollout(void *s, int num_deals, mc_options options) {
     double score = 0;
     content_t deals[MAX_STEPS];
     for (int i = 0; i < MAX_STEPS; ++i) {
@@ -97,12 +92,24 @@ void eval_mc(void *s, value_node *root, size_t num_deals, mc_options options) {
         score += step_score * options.policy_factor;
     }
     score += options.eval(s);
+    return score;
+}
+
+choice_branch* eval_mc(void *s, value_node *root, int num_deals, mc_options options) {
+    assert(options.num_policy_steps + num_deals < MAX_STEPS);
+    void *c = options.copy(s);
+    choice_branch *path[MAX_DEPTH];
+    int path_len = find_path(c, root, options, path);
+
+    double score = rollout(c, num_deals, options);
 
     for (int i = 0; i < path_len; ++i) {
         path[i]->visits++;
         path[i]->destination->value += score;
     }
+    free(c);
     // Root value not updated.
+    return path[path_len - 1];
 }
 
 content_t greedy_choice(state *s, value_node *root) {
@@ -126,9 +133,10 @@ content_t iterate_mc(void *s, content_t *deals, size_t num_deals, mc_options opt
     value_node *root = calloc(1, sizeof(value_node));
     append_deals(root, deals, num_deals);
     for (size_t i = 0; i < options.iterations; ++i) {
-        void *c = options.copy(s);
-        eval_mc(c, root, num_deals, options);
-        free(c);
+        choice_branch *leaf = eval_mc(s, root, num_deals, options);
+        if (leaf->visits > 3) {
+            expand(leaf->destination);
+        }
     }
     content_t choice = greedy_choice(s, root);
     free_tree(root);
