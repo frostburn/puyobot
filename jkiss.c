@@ -90,9 +90,27 @@ unsigned long long jkiss64_step_long(jkiss64 *j)
 static jkiss32 global_gen32 = {123456789, 987654321, 43219876, 6543217};
 static jkiss64 global_gen64 = {123456789123ULL, 987654321987ULL, 43219876, 6543217, 21987643, 1732654};
 
+
+#ifdef _OPENMP
+    #include <omp.h>
+    #define OMP_MAX_THREADS (32)
+    static jkiss64 omp_gen64[OMP_MAX_THREADS];
+    unsigned int jrand_omp() {
+        return jkiss64_step(omp_gen64 + omp_get_thread_num());
+    }
+    void _jkiss_init_omp() {
+        for (int i = 0; i < OMP_MAX_THREADS; ++i) {
+            jkiss64_init(omp_gen64 + i);
+        }
+    }
+#else
+    void _jkiss_init_omp() {}
+#endif
+
 void jkiss_init() {
     jkiss32_init(&global_gen32);
     jkiss64_init(&global_gen64);
+    _jkiss_init_omp();
 }
 
 void jkiss_seed(unsigned int seed) {
