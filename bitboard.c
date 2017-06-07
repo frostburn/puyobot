@@ -1,58 +1,66 @@
 typedef unsigned long long int puyos_t;
 
-void print_puyos(puyos_t puyos) {
-    printf(" ");
+void fprint_puyos(FILE *f, puyos_t puyos) {
+    fprintf(f, " ");
     for (int i = 0; i < WIDTH; ++i) {
-        printf(" %c", 'A' + i);
+        fprintf(f, " %c", 'A' + i);
     }
-    printf("\n");
+    fprintf(f, "\n");
     for (int i = 0; i < 64; ++i) {
         if (i % V_SHIFT == 0) {
             int j = i / V_SHIFT;
             if (j < 10) {
-                printf("%d", j);
+                fprintf(f, "%d", j);
             } else {
-                printf("%c", 'a' + j - 10);
+                fprintf(f, "%c", 'a' + j - 10);
             }
         }
         if ((1ULL << i) & puyos) {
-            printf(" @");
+            fprintf(f, " @");
         } else {
-            printf("  ");
+            fprintf(f, "  ");
         }
         if (i % V_SHIFT == V_SHIFT - 1){
-            printf("\n");
+            fprintf(f, "\n");
         }
     }
-    printf("\n");
+    fprintf(f, "\n");
 }
 
-void print_puyos_2(puyos_t *puyos) {
-    printf(" ");
+void print_puyos(puyos_t puyos) {
+    fprint_puyos(stdout, puyos);
+}
+
+void fprint_puyos_2(FILE *f, puyos_t *puyos) {
+    fprintf(f, " ");
     for (int i = 0; i < WIDTH; ++i) {
-        printf(" %c", 'A' + i);
+        fprintf(f, " %c", 'A' + i);
     }
-    printf("\n");
+    fprintf(f, "\n");
     for (int k = 0; k < 2; ++k) {
         for (int i = 0; i < WIDTH * HEIGHT; ++i) {
             if (i % V_SHIFT == 0) {
                 int j = i / V_SHIFT + k * HEIGHT;
                 if (j < 10) {
-                    printf("%d", j);
+                    fprintf(f, "%d", j);
                 } else {
-                    printf("%c", 'a' + j - 10);
+                    fprintf(f, "%c", 'a' + j - 10);
                 }
             }
             if ((1ULL << i) & puyos[k]) {
-                printf(" @");
+                fprintf(f, " @");
             } else {
-                printf("  ");
+                fprintf(f, "  ");
             }
             if (i % V_SHIFT == V_SHIFT - 1){
-                printf("\n");
+                fprintf(f, "\n");
             }
         }
     }
+}
+
+void print_puyos_2(puyos_t *puyos) {
+    fprint_puyos_2(stdout, puyos);
 }
 
 int popcount(puyos_t puyos) {
