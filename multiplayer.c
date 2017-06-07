@@ -11,7 +11,8 @@ typedef struct player
     int all_clear_bonus;
     int game_overs;
     int pending_nuisance;
-    double leftover_nuisance;
+    int leftover_score;
+    int nuisance_x;
 } player;
 
 typedef struct practice_game
@@ -34,9 +35,9 @@ typedef struct game
 
 void print_player(player *p) {
     print_state(&p->state);
-    int sending = floor(p->chain_score / (double) TARGET_SCORE + p->leftover_nuisance);
+    double sending = (p->chain_score + p->leftover_score) / (double) TARGET_SCORE;
     printf(
-        "score=%d chain=%d sending=%d receiving=%d all clear=%d game_overs=%d\n",
+        "score=%d chain=%d sending=%.2f receiving=%d all clear=%d game_overs=%d\n",
         p->total_score, p->chain, sending, p->pending_nuisance, p->all_clear_bonus, p->game_overs
     );
 }
@@ -78,14 +79,14 @@ void clear_player(player *p) {
     p->total_score = 0;
     p->all_clear_bonus = 0;
     p->pending_nuisance = 0;
-    p->leftover_nuisance = 0;
+    p->leftover_score = 0;
+    p->nuisance_x = 0;
 }
 
 int handle_nuisance(player *p, int score) {
     // Send garbage
-    double nuisance = score / (double) TARGET_SCORE + p->leftover_nuisance;
-    int nuisance_sent = floor(nuisance);
-    p->leftover_nuisance = nuisance - nuisance_sent;
+    int nuisance_sent = (score + p->leftover_score) / TARGET_SCORE;
+    p->leftover_score = (score + p->leftover_score) % TARGET_SCORE;
     // Offset garbage
     if (p->pending_nuisance >= nuisance_sent) {
         p->pending_nuisance -= nuisance_sent;
@@ -109,11 +110,10 @@ int handle_nuisance(player *p, int score) {
             }
             nuisance_reveiced -= nuisance_placed;
             while(nuisance_placed) {
-                puyos_t n = 1ULL << (jrand() % WIDTH + row * V_SHIFT);
-                if (!(p->state.floors[0][GARBAGE] & n)) {
-                    p->state.floors[0][GARBAGE] |= n;
-                    --nuisance_placed;
-                }
+                puyos_t n = 1ULL << (p->nuisance_x + row * V_SHIFT);
+                p->state.floors[0][GARBAGE] |= n;
+                p->nuisance_x = (p->nuisance_x + 1) % WIDTH;
+                --nuisance_placed;
             }
             ++row;
         }
@@ -149,8 +149,20 @@ void step_game(game *g, content_t *choices) {
         player *p = g->players + i;
         if (p->chain) {
             step_player(p);
-        }
-        if (!p->chain) {
+            if (!p->chain) {
+                if (p->all_clear_bonus) {
+                    p->chain_score += MAX_NUISANCE_ROWS * WIDTH * TARGET_SCORE;
+                }
+                int nuisance_sent = handle_nuisance(p, p->chain_score);
+                p->chain_score = 0;
+                p->all_clear_bonus = 0;
+                for (int j = 0; j < g->num_players; ++j) {
+                    if (j != i) {
+                        g->players[j].pending_nuisance += nuisance_sent;
+                    }
+                }
+            }
+        } else {
             int valid = apply_deal_and_choice(&p->state, g->deals[p->deal_index], choices[i]);
             handle_gravity(&p->state);
             ++p->deal_index;
@@ -161,24 +173,52 @@ void step_game(game *g, content_t *choices) {
                 }
                 g->total_num_deals <<= 1;
             }
-            int nuisance = handle_nuisance(p, p->chain_score);
-            p->chain_score = 0;
+            int nuisance_sent = handle_nuisance(p, p->chain_score);
+            assert(!nuisance_sent);
             step_player(p);
-            if (p->all_clear_bonus) {
-                nuisance += MAX_NUISANCE_ROWS * WIDTH;
-                p->all_clear_bonus = 0;
-            }
-            for (int j = 0; j < g->num_players; ++j) {
-                if (j != i) {
-                    g->players[j].pending_nuisance += nuisance;
-                }
-            }
             if (!valid) {
                 clear_player(p);
                 ++p->game_overs;
             }
         }
     }
+}
+
+practice_game* game_as_practice(game *g, int player_index) {
+    // If the player is stuck chaining there is no practice state the reflects that.
+    if (g->players[player_index].chain) {
+        return NULL;
+    }
+    // Multiple opponents would require multiple incomming channels for practice.
+    assert(g->num_players == 2);  // Limit to two for now.
+    for (int i = 0; i < g->num_players; ++i) {
+        if (i == player_index) {
+            continue;
+        }
+        player temp_player = g->players[i];
+        practice_game *pg = calloc(1, sizeof(practice_game));
+        pg->num_deals = g->num_deals;
+        pg->player = g->players[player_index];
+        handle_gravity(&pg->player.state);
+        for (int j = 0; j < g->num_deals; ++j) {
+            pg->deals[j] = g->deals[j + temp_player.deal_index];
+        }
+        for (int j = g->num_deals; j < MAX_DEALS; ++j) {
+            pg->deals[j] = rand_piece();
+        }
+        if (g->players[i].chain) {
+            int delay = 0;
+            do {
+                step_player(&temp_player);
+                ++delay;
+            } while(temp_player.chain);
+            int nuisance = handle_nuisance(&temp_player, temp_player.chain_score);
+            pg->delay = delay;
+            pg->incoming = nuisance;
+        }
+        return pg;
+    }
+    assert(0);
 }
 
 void* copy_practice(void *pg) {
