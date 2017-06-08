@@ -1,5 +1,6 @@
 #define TARGET_SCORE (70)
 #define MAX_NUISANCE_ROWS (5)
+#define MAX_PLAYERS (16)
 
 typedef struct player
 {
@@ -152,6 +153,7 @@ int step_player(player *p) {
 }
 
 void step_game(game *g, content_t *choices) {
+    int nuisance_receivers[MAX_PLAYERS] = {0};
     for (int i = 0; i < g->num_players; ++i) {
         player *p = g->players + i;
         if (p->chain) {
@@ -168,13 +170,13 @@ void step_game(game *g, content_t *choices) {
                         g->players[j].pending_nuisance += nuisance_sent;
                     }
                 }
+                nuisance_receivers[i] = 1;
             }
         } else {
             int valid = apply_deal_and_choice(&p->state, g->deals[p->deal_index], choices[i]);
             handle_gravity(&p->state);
             ++p->deal_index;
             step_player(p);
-            // TODO: Figure out how to prevent perpetual offsetting
             if (!p->chain) {
                 receive_nuisance(p);
             }
@@ -190,6 +192,12 @@ void step_game(game *g, content_t *choices) {
                 }
                 g->total_num_deals <<= 1;
             }
+        }
+    }
+    // Separate loop to mitigate iteration order issues.
+    for (int i = 0; i < g->num_players; ++i) {
+        if (nuisance_receivers[i]) {
+            receive_nuisance(g->players + i);
         }
     }
 }
