@@ -103,7 +103,6 @@ content_t group_policy(void *s, content_t *deals, int  num_deals) {
     return solve(s, deals, num_deals, options);
 }
 
-
 double _eval_groups_chains(void *s) {
     float groups = eval_groups(s);
     float chains = eval_chains(s);
@@ -121,4 +120,22 @@ content_t group_chain_policy(void *s, content_t *deals, int  num_deals) {
     }
     tree_options options = simple_tree_options(_eval_groups_chains, 0, factor);
     return solve(s, deals, num_deals, options);
+}
+
+double _eval_gcn_practice(void *_pg) {
+    practice_game *pg = _pg;
+    state *s = &pg->player.state;
+    double groups = eval_groups(s);
+    double chains = eval_groups(s);
+    double nuisance = popcount(s->floors[0][GARBAGE]) + popcount(s->floors[1][GARBAGE]);
+    double incoming = pg->incoming;
+
+    return groups + 20 * chains - nuisance * 0.96 - incoming / (0.3 + 0.01 * pg->delay);
+}
+
+content_t gcn_practice_policy(void *pg, content_t *deals, int num_deals) {
+    tree_options options = simple_tree_options(_eval_gcn_practice, 0, 0.5);
+    options.step = step_practice;
+    options.copy = copy_practice;
+    return solve(pg, deals, num_deals, options);
 }
