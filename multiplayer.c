@@ -156,6 +156,7 @@ int step_player(player *p) {
 void step_game(game *g, content_t *choices) {
     int nuisance_receivers[MAX_PLAYERS] = {0};
     int has_stepped[MAX_PLAYERS] = {0};
+    int game_over = 0;
     for (int i = 0; i < g->num_players; ++i) {
         player *p = g->players + i;
         if (p->chain) {
@@ -193,7 +194,7 @@ void step_game(game *g, content_t *choices) {
             receive_nuisance(p);
         }
         if (!valid) {
-            clear_player(p);
+            game_over = 1;
             ++p->game_overs;
         }
         // Just some memory management.
@@ -209,6 +210,11 @@ void step_game(game *g, content_t *choices) {
     for (int i = 0; i < g->num_players; ++i) {
         if (nuisance_receivers[i]) {
             receive_nuisance(g->players + i);
+        }
+    }
+    if (game_over) {
+        for (int i = 0; i < g->num_players; ++i) {
+            clear_player(g->players + i);
         }
     }
 }
