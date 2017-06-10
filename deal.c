@@ -3,6 +3,7 @@
 #define CHOICE_90 (64)
 #define CHOICE_180 (128)
 #define CHOICE_270 (192)
+#define CHOICE_PASS (255)
 #define CHOICE_X_MASK (0x3f)
 #define COLOR1_MASK (15)
 #define COLOR2_SHIFT (4)

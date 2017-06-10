@@ -29,28 +29,47 @@ void init_all() {
     init_tetrominoes();
 }
 
+content_t gcn_game_policy(game *g, int player_index) {
+    practice_game *pg = game_as_practice(g, player_index);
+    if (!pg) {
+        return CHOICE_PASS;
+    }
+    content_t choice = gcn_practice_policy(pg, pg->deals, pg->num_deals);
+    free(pg);
+    return choice;
+}
+
+content_t mc_game_policy(game *g, int player_index) {
+    practice_game *pg = game_as_practice(g, player_index);
+    if (!pg) {
+        return CHOICE_PASS;
+    }
+    mc_options options = simple_mc_options(10000, random_policy);
+    options.step = step_practice;
+    options.copy = copy_practice;
+    content_t choice = iterate_mc(pg, pg->deals, pg->num_deals, options);
+    free(pg);
+    return choice;
+}
+
 int main(int argc, char *argv[]) {
     init_all();
+    test_all();
+
     for (int i = 0; i < 100; ++i) {
         printf("\n");
     }
 
-    practice_game *pg = calloc(1, sizeof(practice_game));
-    int num_deals = 3;
-    for (int i = 0; i < num_deals; ++i) {
-        append_practice_deal(pg, rand_piece());
-    }
-    pg->incoming = WIDTH * 5;
-    pg->delay = 20;
-
+    game *g = new_game(2, 3);
     for (int i = 0; i < 1000; ++i) {
-        content_t choice = gcn_practice_policy(pg, pg->deals, num_deals);
-        step_practice(pg, pg->deals[0], choice);
-        print_practice(pg);
-        if (i % 30 == 29) {
-            pg->incoming = WIDTH * 5;
-            pg->delay = 28;
-        }
+        content_t choices[2] = {
+            gcn_game_policy(g, 0),
+            mc_game_policy(g, 1)
+        };
+        step_game(g, choices);
+        print_player(g->players);
+        print_player(g->players + 1);
+        usleep(50000);
     }
     return 0;
 }

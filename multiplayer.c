@@ -1,4 +1,5 @@
 #define TARGET_SCORE (70)
+#define DROP_SCORE (10)
 #define MAX_NUISANCE_ROWS (5)
 #define MAX_PLAYERS (16)
 
@@ -154,10 +155,12 @@ int step_player(player *p) {
 
 void step_game(game *g, content_t *choices) {
     int nuisance_receivers[MAX_PLAYERS] = {0};
+    int has_stepped[MAX_PLAYERS] = {0};
     for (int i = 0; i < g->num_players; ++i) {
         player *p = g->players + i;
         if (p->chain) {
             step_player(p);
+            has_stepped[i] = 1;
             if (!p->chain) {
                 if (p->all_clear_bonus) {
                     p->chain_score += MAX_NUISANCE_ROWS * WIDTH * TARGET_SCORE;
@@ -172,26 +175,34 @@ void step_game(game *g, content_t *choices) {
                 }
                 nuisance_receivers[i] = 1;
             }
-        } else {
-            int valid = apply_deal_and_choice(&p->state, g->deals[p->deal_index], choices[i]);
-            handle_gravity(&p->state);
-            ++p->deal_index;
-            step_player(p);
-            if (!p->chain) {
-                receive_nuisance(p);
+        }
+    }
+    // Separate loop to mitigate iteration order issues.
+    for (int i = 0; i < g->num_players; ++i) {
+        if (has_stepped[i]) {
+            continue;
+        }
+        player *p = g->players + i;
+        int valid = apply_deal_and_choice(&p->state, g->deals[p->deal_index], choices[i]);
+        p->chain_score += DROP_SCORE;
+        p->total_score += DROP_SCORE;
+        handle_gravity(&p->state);
+        ++p->deal_index;
+        step_player(p);
+        if (!p->chain) {
+            receive_nuisance(p);
+        }
+        if (!valid) {
+            clear_player(p);
+            ++p->game_overs;
+        }
+        // Just some memory management.
+        if (p->deal_index + g->num_deals >= g->total_num_deals) {
+            g->deals = realloc(g->deals, (g->total_num_deals << 1) * sizeof(content_t));
+            for (int i = 0; i < g->total_num_deals; ++i) {
+                g->deals[g->total_num_deals + i] = rand_piece();
             }
-            if (!valid) {
-                clear_player(p);
-                ++p->game_overs;
-            }
-            // Just some memory management.
-            if (p->deal_index + g->num_deals >= g->total_num_deals) {
-                g->deals = realloc(g->deals, (g->total_num_deals << 1) * sizeof(content_t));
-                for (int i = 0; i < g->total_num_deals; ++i) {
-                    g->deals[g->total_num_deals + i] = rand_piece();
-                }
-                g->total_num_deals <<= 1;
-            }
+            g->total_num_deals <<= 1;
         }
     }
     // Separate loop to mitigate iteration order issues.
@@ -262,7 +273,7 @@ double step_practice(void *_pg, content_t deal, content_t choice) {
     }
     // Assume deal is pg->deals[0] for now.
     int valid = apply_deal_and_choice(s, deal, choice);
-    int chain_score = resolve(s, NULL);
+    int chain_score = resolve(s, NULL) + DROP_SCORE;
     score += chain_score;
     pg->player.total_score += chain_score;
     int outgoing = send_nuisance(&pg->player, chain_score);
