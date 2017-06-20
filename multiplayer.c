@@ -10,6 +10,7 @@ typedef struct player
     int chain;
     int chain_score;
     int total_score;
+    int chain_all_clear_bonus;
     int all_clear_bonus;
     int game_overs;
     int pending_nuisance;
@@ -39,8 +40,8 @@ void print_player(player *p) {
     print_state(&p->state);
     double sending = (p->chain_score + p->leftover_score) / (double) TARGET_SCORE;
     printf(
-        "score=%d chain=%d sending=%.2f receiving=%d all clear=%d game_overs=%d\n",
-        p->total_score, p->chain, sending, p->pending_nuisance, p->all_clear_bonus, p->game_overs
+        "score=%d chain=%d sending=%.2f receiving=%d all clear=%d/%d game_overs=%d\n",
+        p->total_score, p->chain, sending, p->pending_nuisance, p->chain_all_clear_bonus, p->all_clear_bonus, p->game_overs
     );
 }
 
@@ -80,6 +81,7 @@ void clear_player(player *p) {
     p->chain_score = 0;
     p->total_score = 0;
     p->all_clear_bonus = 0;
+    p->chain_all_clear_bonus = 0;
     p->pending_nuisance = 0;
     p->leftover_score = 0;
     p->nuisance_x = 0;
@@ -100,7 +102,7 @@ int send_nuisance(player *p, int score) {
     return nuisance_sent;
 }
 
-int receive_nuisance(player *p) {
+void receive_nuisance(player *p) {
     // Receive garbage
     int nuisance_received = 0;
     if (p->pending_nuisance) {
@@ -127,7 +129,6 @@ int receive_nuisance(player *p) {
         handle_gravity(&p->state);
         kill_puyos(&p->state);
     }
-    return nuisance_received;
 }
 
 int step_player(player *p) {
@@ -142,10 +143,11 @@ int step_player(player *p) {
         for (int i = 0; i < NUM_COLORS; ++i) {
             if (p->state.floors[NUM_FLOORS-1][i]) {
                 all_clear_bonus = 0;
+                break;
             }
         }
         if (all_clear_bonus) {
-            p->all_clear_bonus = 1;
+            p->chain_all_clear_bonus = 1;
         }
     } else {
         p->chain = 0;
@@ -166,9 +168,10 @@ void step_game(game *g, content_t *choices) {
                 if (p->all_clear_bonus) {
                     p->chain_score += MAX_NUISANCE_ROWS * WIDTH * TARGET_SCORE;
                 }
+                p->all_clear_bonus = p->chain_all_clear_bonus;
+                p->chain_all_clear_bonus = 0;
                 int nuisance_sent = send_nuisance(p, p->chain_score);
                 p->chain_score = 0;
-                p->all_clear_bonus = 0;
                 for (int j = 0; j < g->num_players; ++j) {
                     if (j != i) {
                         g->players[j].pending_nuisance += nuisance_sent;
@@ -247,6 +250,12 @@ practice_game* game_as_practice(game *g, int player_index) {
                 step_player(&opponent);
                 ++delay;
             } while(opponent.chain);
+            if (opponent.all_clear_bonus) {
+                opponent.chain_score += MAX_NUISANCE_ROWS * WIDTH * TARGET_SCORE;
+            }
+            // All clear reset omitted.
+            // opponent.all_clear_bonus = opponent.chain_all_clear_bonus;
+            // opponent.chain_all_clear_bonus = 0;
             int nuisance = send_nuisance(&opponent, opponent.chain_score);
             pg->delay = delay;
             pg->incoming = nuisance;

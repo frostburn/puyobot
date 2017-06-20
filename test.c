@@ -300,6 +300,56 @@ void test_game_symmetry() {
     free_game(g);
 }
 
+void test_game_all_clear() {
+    game *g = new_game(2, 6);
+    int x = 3;
+    int o = 0;
+    content_t choices[2] = {0, make_choice(&x, &o)};
+    g->deals[0] = 0;
+    g->deals[1] = 0;
+    g->deals[2] = make_piece(1, 2);
+    g->deals[3] = make_piece(3, 3);
+    g->deals[4] = make_piece(3, 3);
+    g->deals[5] = make_piece(4, 1);
+
+    step_game(g, choices);
+    choices[1] = 0;
+    step_game(g, choices);
+    x = 5;
+    choices[1] = make_choice(&x, &o);
+    step_game(g, choices);
+
+    print_player(g->players);
+    print_player(g->players + 1);
+
+    assert(g->players[0].all_clear_bonus);
+    assert(!g->players[1].state.floors[NUM_FLOORS - 1][GARBAGE]);
+
+    practice_game *pg = game_as_practice(g, 1);
+    assert(!pg->incoming);
+    print_practice(pg);
+    free(pg);
+
+    step_game(g, choices);
+    choices[1] = 0;
+    step_game(g, choices);
+    step_game(g, choices);
+
+    pg = game_as_practice(g, 1);
+    assert(pg->incoming > 1);
+    print_practice(pg);
+    free(pg);
+
+    step_game(g, choices);
+    print_player(g->players);
+    print_player(g->players + 1);
+
+    assert(!g->players[0].all_clear_bonus);
+    assert(g->players[1].state.floors[NUM_FLOORS - 1][GARBAGE]);
+
+    free_game(g);
+}
+
 void test_all() {
     test_lrand();
     test_gravity();
@@ -313,4 +363,5 @@ void test_all() {
     test_flood_2();
     test_mirror_game();
     test_game_symmetry();
+    test_game_all_clear();
 }
