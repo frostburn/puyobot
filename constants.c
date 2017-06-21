@@ -37,3 +37,5 @@
 #define MAX_DEALS (5)
 
 static char* COLOR_NAMES[NUM_COLORS] = {"red", "green", "yellow", "blue", "purple", "garbage"};
+
+#define NUM_DEAL_COLORS (4)

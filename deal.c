@@ -28,7 +28,7 @@ content_t make_piece(content_t color1, content_t color2) {
 }
 
 content_t rand_piece() {
-    return make_piece(jrand() % (NUM_COLORS - 1), jrand() % (NUM_COLORS - 1));
+    return make_piece(jrand() % NUM_DEAL_COLORS, jrand() % NUM_DEAL_COLORS);
 }
 
 content_t deal_color1(content_t deal) {

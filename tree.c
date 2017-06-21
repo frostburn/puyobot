@@ -1,4 +1,4 @@
-#define NUM_REDUCED_DEALS (NUM_COLORS - 1 + ((NUM_COLORS - 1) * (NUM_COLORS - 2)) / 2)
+#define NUM_REDUCED_DEALS (NUM_DEAL_COLORS + (NUM_DEAL_COLORS * (NUM_DEAL_COLORS - 1)) / 2)
 
 typedef unsigned char num_t;
 
@@ -71,8 +71,8 @@ void expand(value_node *root) {
         root->num_deals = NUM_REDUCED_DEALS;
         root->deals = calloc(root->num_deals, sizeof(dealt_node));
         num_t i = 0;
-        for (num_t j = 0; j < NUM_COLORS - 1; ++j) {
-            for (num_t k = 0; k < NUM_COLORS - 1; ++k) {
+        for (num_t j = 0; j < NUM_DEAL_COLORS; ++j) {
+            for (num_t k = 0; k < NUM_DEAL_COLORS; ++k) {
                 // Symmetry reduction
                 if (k > j) {
                     continue;
@@ -83,7 +83,7 @@ void expand(value_node *root) {
                 } else {
                     root->deals[i].probability = 2.0;
                 }
-                root->deals[i].probability /= (NUM_COLORS - 1) * (NUM_COLORS - 1);
+                root->deals[i].probability /= NUM_DEAL_COLORS * NUM_DEAL_COLORS;
                 root->deals[i].num_choices = NUM_CHOICES;
                 root->deals[i].choices = calloc(root->deals[i].num_choices, sizeof(choice_branch));
                 for (num_t k = 0; k < root->deals[i].num_choices; ++k) {
