@@ -46,7 +46,7 @@ tree_options simple_tree_options(eval_fun eval, int depth, float tree_factor) {
 }
 
 // Deterministic deals
-void append_deals(value_node *root, content_t *deals, int num_deals) {
+void append_deals(value_node *root, content_t *deals, int num_deals, content_t *choices, int num_choices) {
     if (!num_deals) {
         return;
     }
@@ -54,18 +54,18 @@ void append_deals(value_node *root, content_t *deals, int num_deals) {
     root->deals = calloc(root->num_deals, sizeof(dealt_node));
     root->deals[0].content = deals[0];
     root->deals[0].probability = 1;
-    root->deals[0].num_choices = NUM_CHOICES;
-    root->deals[0].choices = calloc(root->deals[0].num_choices, sizeof(choice_branch));
-    for (num_t k = 0; k < root->deals[0].num_choices; ++k) {
-        root->deals[0].choices[k].content = CHOICES[k];
-        root->deals[0].choices[k].probability = 1.0 / NUM_CHOICES;
+    root->deals[0].num_choices = num_choices;
+    root->deals[0].choices = calloc(num_choices, sizeof(choice_branch));
+    for (num_t k = 0; k < num_choices; ++k) {
+        root->deals[0].choices[k].content = choices[k];
+        root->deals[0].choices[k].probability = 1.0 / num_choices;
         root->deals[0].choices[k].destination = calloc(1, sizeof(value_node));
-        append_deals(root->deals[0].choices[k].destination, deals + 1, num_deals - 1);
+        append_deals(root->deals[0].choices[k].destination, deals + 1, num_deals - 1, choices, num_choices);
     }
 }
 
 // Probabilistic deals
-void expand(value_node *root) {
+void expand(value_node *root, content_t *choices, int num_choices) {
     root->evaluated = 0;
     if (root->num_deals == 0) {
         root->num_deals = NUM_REDUCED_DEALS;
@@ -84,11 +84,11 @@ void expand(value_node *root) {
                     root->deals[i].probability = 2.0;
                 }
                 root->deals[i].probability /= NUM_DEAL_COLORS * NUM_DEAL_COLORS;
-                root->deals[i].num_choices = NUM_CHOICES;
-                root->deals[i].choices = calloc(root->deals[i].num_choices, sizeof(choice_branch));
-                for (num_t k = 0; k < root->deals[i].num_choices; ++k) {
-                    root->deals[i].choices[k].content = CHOICES[k];
-                    root->deals[i].choices[k].probability = 1.0 / NUM_CHOICES;
+                root->deals[i].num_choices = num_choices;
+                root->deals[i].choices = calloc(num_choices, sizeof(choice_branch));
+                for (num_t k = 0; k < num_choices; ++k) {
+                    root->deals[i].choices[k].content = choices[k];
+                    root->deals[i].choices[k].probability = 1.0 / num_choices;
                     root->deals[i].choices[k].destination = calloc(1, sizeof(value_node));
                 }
                 ++i;
@@ -98,7 +98,7 @@ void expand(value_node *root) {
     } else {
         for (num_t i = 0; i < root->num_deals; ++i) {
             for (num_t k = 0; k < root->deals[i].num_choices; ++k) {
-                expand(root->deals[i].choices[k].destination);
+                expand(root->deals[i].choices[k].destination, choices, num_choices);
             }
         }
     }
@@ -231,9 +231,9 @@ void free_tree(value_node *root) {
 
 value_node* solve_tree(void *s, content_t *deals, int num_deals, tree_options options) {
     value_node *root = calloc(1, sizeof(value_node));
-    append_deals(root, deals, num_deals);
+    append_deals(root, deals, num_deals, CHOICES, NUM_CHOICES);
     for (int i = 0; i < options.depth; ++i) {
-        expand(root);
+        expand(root, CHOICES, NUM_CHOICES);
     }
     #ifdef _OPENMP
         omp_evaluate(s, root, options);

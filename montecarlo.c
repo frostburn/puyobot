@@ -131,11 +131,11 @@ content_t greedy_choice(state *s, value_node *root) {
 
 content_t iterate_mc(void *s, content_t *deals, size_t num_deals, mc_options options) {
     value_node *root = calloc(1, sizeof(value_node));
-    append_deals(root, deals, num_deals);
+    append_deals(root, deals, num_deals, CHOICES, NUM_CHOICES);
     for (size_t i = 0; i < options.iterations; ++i) {
         choice_branch *leaf = eval_mc(s, root, num_deals, options);
         if (leaf->visits > 3) {
-            expand(leaf->destination);
+            expand(leaf->destination, CHOICES, NUM_CHOICES);
         }
     }
     content_t choice = greedy_choice(s, root);
