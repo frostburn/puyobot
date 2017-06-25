@@ -72,7 +72,6 @@ void assign_single_deals(value_node *root, content_t *deals, int num_deals) {
     if (!num_deals) {
         return;
     }
-    root->evaluated = 0;
     assert(root->num_deals == 1);
     root->deals[0].content = deals[0];
     for (num_t i = 0; i < root->num_deals; ++i) {
@@ -118,6 +117,18 @@ void expand_all_deals(value_node *root, content_t *choices, int num_choices) {
             for (num_t k = 0; k < root->deals[i].num_choices; ++k) {
                 expand_all_deals(root->deals[i].choices[k].destination, choices, num_choices);
             }
+        }
+    }
+}
+
+void reset_tree(value_node *root) {
+    if (!root) {
+        return;
+    }
+    root->evaluated = 0;
+    for (num_t i = 0; i < root->num_deals; ++i) {
+        for (num_t k = 0; k < root->deals[i].num_choices; ++k) {
+            reset_tree(root->deals[i].choices[k].destination);
         }
     }
 }
@@ -247,24 +258,39 @@ void free_tree(value_node *root) {
     free(root);
 }
 
-value_node* solve_tree(void *s, content_t *deals, int num_deals, tree_options options) {
+value_node* make_tree(int num_deals, int depth, content_t **choicess, int *num_choicess) {
+    value_node *root = calloc(1, sizeof(value_node));
+    for (int i = 0; i < num_deals; ++i) {
+        expand_single_deal(root, choicess[i], num_choicess[i]);
+    }
+    for (int i = 0; i < depth; ++i) {
+        expand_all_deals(root, choicess[i + num_deals], num_choicess[i + num_deals]);
+    }
+    return root;
+}
+
+value_node* make_full_tree(int num_deals, int depth) {
     value_node *root = calloc(1, sizeof(value_node));
     for (int i = 0; i < num_deals; ++i) {
         expand_single_deal(root, CHOICES, NUM_CHOICES);
     }
-    assign_single_deals(root, deals, num_deals);
-    for (int i = 0; i < options.depth; ++i) {
+    for (int i = 0; i < depth; ++i) {
         expand_all_deals(root, CHOICES, NUM_CHOICES);
     }
+    return root;
+}
+
+void solve_tree(void *s, value_node *root, content_t *deals, int num_deals, tree_options options) {
+    assign_single_deals(root, deals, num_deals);
     #ifdef _OPENMP
         omp_evaluate(s, root, options);
     #endif
     evaluate(s, root, options);
-    return root;
 }
 
 content_t solve(void *s, content_t *deals, int num_deals, tree_options options) {
-    value_node *root = solve_tree(s, deals, num_deals, options);
+    value_node *root = make_full_tree(num_deals, options.depth);
+    solve_tree(s, root, deals, num_deals, options);
     choice_branch *choice = choose(root);
     content_t action = choice->content;
     free_tree(root);
