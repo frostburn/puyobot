@@ -173,44 +173,67 @@ def main(command, url):
     mode = 'puyo:duel'
     if url.endswith('/'):
         url = url[:-1]
-    response = requests.get('{}/game/list?status=open&mode={}'.format(url, mode))
-    if (response.json()['games']):
-        payload = {
-            'id': response.json()['games'][0]['id'],
-        }
-        response = requests.post('{}/game/join'.format(url), json=payload)
-    else:
-        response = requests.post('{}/game/create/'.format(url), json={'mode': mode})
-    print (response.content)
-    uuid = response.json()['id']
-    try:
-        while True:
-            sleep(0.3)
-            response = requests.get('{}/play/{}?poll=1'.format(url, uuid))
-            state = response.json()
-            if state.get('canPlay'):
-                time = state['time']
-                player = state['player']
-                game = Game(state)
-                # TODO: Use sockets instead of files to communicate.
-                with open("in.bin", "wb") as f:
-                    f.write(game.pack())
-                subprocess.call([command, str(player)])
-                with open("out.bin", "rb") as f:
-                    game = Game.unpack(f.read())
-                blocks = game.players[player].state.blocks[:2 * WIDTH]
-
-                event = {
-                    'time': time,
-                    'type': 'addPuyos',
-                    'player': player,
-                    'blocks': blocks,
-                }
-                response = requests.post('{}/play/{}'.format(url, uuid), json=event)
-                assert (response.json()['success'])
-    finally:
-        response = requests.delete('{}/play/{}'.format(url, uuid))
+    restart = False
+    while True:
+        if restart:
+            sleep(1)
+        response = requests.get('{}/game/list?status=open&mode={}'.format(url, mode))
+        if (response.json()['games']):
+            payload = {
+                'id': response.json()['games'][0]['id'],
+            }
+            response = requests.post('{}/game/join'.format(url), json=payload)
+        else:
+            response = requests.post('{}/game/create/'.format(url), json={'mode': mode})
         print (response.content)
+        uuid = response.json()['id']
+        restart = False
+        try:
+            while not restart:
+                sleep(0.2)
+                response = requests.get('{}/play/{}?poll=1'.format(url, uuid))
+                state = response.json()
+                status = state.get('status', {})
+                if status.get('terminated'):
+                    print (status.get('result'), 'restarting...')
+                    restart = True
+                    break
+                if state.get('canPlay'):
+                    time = state['time']
+                    player = state['player']
+                    game = Game(state)
+                    deal = game.deals[game.players[player].deal_index]
+                    # TODO: Use sockets instead of files to communicate.
+                    with open("in.bin", "wb") as f:
+                        f.write(game.pack())
+                    subprocess.call([command, str(player)])
+                    with open("out.bin", "rb") as f:
+                        game = Game.unpack(f.read())
+                    blocks = game.players[player].state.blocks[:2 * WIDTH]
+
+                    event = {
+                        'type': 'addPuyos',
+                        'blocks': blocks,
+                    }
+                    response = requests.post('{}/play/{}'.format(url, uuid), json=event)
+                    if not response.json()['success']:
+                        # The bots pick badly sometimes so we need to suicide like this
+                        for i in range(WIDTH - 1):
+                            suicide = ([0] * i) + deal.blocks + ([0] * (WIDTH - i - 2))
+                            print (suicide)
+                            event = {
+                                'type': 'addPuyos',
+                                'blocks': suicide,
+                            }
+                            response = requests.post('{}/play/{}'.format(url, uuid), json=event)
+                            if response.json()['success']:
+                                break
+                    if not response.json()['success']:
+                        reason = response.json().get('reason', '')
+                        raise ValueError('Cannot play a move because %s' % reason)
+        finally:
+            response = requests.delete('{}/play/{}'.format(url, uuid))
+            print (response.content)
 
 
 if __name__ == '__main__':
