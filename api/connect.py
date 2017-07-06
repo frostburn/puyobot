@@ -178,13 +178,15 @@ def main(command, url):
         if restart:
             sleep(1)
         response = requests.get('{}/game/list?status=open&mode={}'.format(url, mode))
+        payload = {
+            'metadata': {'name': 'frostbot'},
+        }
         if (response.json()['games']):
-            payload = {
-                'id': response.json()['games'][0]['id'],
-            }
+            payload['id'] = response.json()['games'][0]['id']
             response = requests.post('{}/game/join'.format(url), json=payload)
         else:
-            response = requests.post('{}/game/create/'.format(url), json={'mode': mode})
+            payload['mode'] = mode
+            response = requests.post('{}/game/create/'.format(url), json=payload)
         print (response.content)
         uuid = response.json()['id']
         restart = False
