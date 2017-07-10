@@ -350,6 +350,33 @@ void test_game_all_clear() {
     free_game(g);
 }
 
+// XXX: This test is broken.
+void test_max_score() {
+    jkiss_seed(100);
+
+    int num_deals = 3;
+    int depth = 1;
+    content_t deals[3] = {rand_piece(), rand_piece(), rand_piece()};
+    state *s = calloc(1, sizeof(state));
+    tree_options options = simple_tree_options(eval_zero, depth, 1);
+    for (int i = 0; i < 100; ++i) {
+        clear_state(s);
+        blast_state(s, 10);
+        resolve(s, NULL);
+        value_node *root = make_full_tree(num_deals, options.depth);
+        solve_tree(s, root, deals, num_deals, options);
+        int score = max_score(s, deals, num_deals, num_deals + depth);
+        if (root->value >= score || 1) {
+            print_state(s);
+            print_deals(deals, num_deals);
+            printf("%f <= %d\n", root->value, score);
+        }
+        assert(root->value <= score);
+        free_tree(root);
+    }
+    free(s);
+}
+
 void test_all() {
     test_lrand();
     test_gravity();
