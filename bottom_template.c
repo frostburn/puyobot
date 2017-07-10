@@ -70,7 +70,7 @@ bottom_template* bottom_chain_of_fours(int num_links) {
                     --j;
                 }
             }
-            if (has_gap(floor[k])) {
+            if (gap_size(floor[k])) {
                 allowed ^= floor[k];
                 floor[k] = 0;
                 --k;

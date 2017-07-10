@@ -384,20 +384,26 @@ void shuffle_2(puyos_t *array, size_t n) {
     }
 }
 
-int has_gap(puyos_t puyos) {
+
+int gap_size(puyos_t puyos) {
     puyos = beam_up(puyos);
     int run = 0;
     int gap = 0;
     for (int i = 0; i < WIDTH; ++i) {
         puyos_t probe = 1ULL << i;
         if (probe & puyos) {
-            run = 1;
+            run += 1;
             if (gap) {
-                return 1;
+                return gap;
             }
         } else if (run) {
-            gap = 1;
+            gap += 1;
         }
     }
     return 0;
+}
+
+int gap_size_2(puyos_t * puyos) {
+    beam_up_2(puyos);
+    return gap_size(puyos[0]);
 }
