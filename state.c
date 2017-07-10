@@ -157,8 +157,8 @@ int clear_groups(state *s, int chain_number) {
                 num_cleared += group_size;
 
                 group_size -= CLEAR_THRESHOLD;
-                if (group_size >= MAX_GROUP_BONUS) {
-                    group_size = MAX_GROUP_BONUS - 1;
+                if (group_size >= NUM_GROUP_BONUS) {
+                    group_size = NUM_GROUP_BONUS - 1;
                 }
                 group_bonus += GROUP_BONUS[group_size];
                 color_flags |= 1 << i;
@@ -184,8 +184,8 @@ int clear_groups(state *s, int chain_number) {
                 num_cleared += group_size;
 
                 group_size -= CLEAR_THRESHOLD;
-                if (group_size >= MAX_GROUP_BONUS) {
-                    group_size = MAX_GROUP_BONUS - 1;
+                if (group_size >= NUM_GROUP_BONUS) {
+                    group_size = NUM_GROUP_BONUS - 1;
                 }
                 group_bonus += GROUP_BONUS[group_size];
                 color_flags |= 1 << i;
@@ -199,8 +199,8 @@ int clear_groups(state *s, int chain_number) {
         }
     }
     int color_bonus = COLOR_BONUS[popcount(color_flags)];
-    if (chain_number >= MAX_CHAIN_POWER) {
-        chain_number = MAX_CHAIN_POWER - 1;
+    if (chain_number >= NUM_CHAIN_POWERS) {
+        chain_number = NUM_CHAIN_POWERS - 1;
     }
     int chain_power = CHAIN_POWERS[chain_number];
     int clear_bonus = chain_power + color_bonus + group_bonus;
@@ -311,6 +311,22 @@ void assert_sanity(state *s) {
                 }
                 assert(!(s->floors[j][i] & s->floors[j][k]));
             }
+        }
+    }
+}
+
+void blast_state(state *s, int num_shots) {
+    puyos_t all[NUM_FLOORS];
+    get_state_mask(s, all);
+    puyos_t allowed[2] = {FULL &~ DEATH_BLOCK & ~all[0], FULL & ~all[1]};
+    while (num_shots && (allowed[0] || allowed[1])) {
+        puyos_t p = 1ULL << (jrand() % (WIDTH * HEIGHT));
+        int i = jrand() % NUM_FLOORS;
+        int k = jrand() % NUM_DEAL_COLORS;
+        if (p & allowed[i]) {
+            s->floors[i][k] |= p;
+            allowed[i] ^= p;
+            num_shots--;
         }
     }
 }
