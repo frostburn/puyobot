@@ -350,6 +350,28 @@ void test_game_all_clear() {
     free_game(g);
 }
 
+void test_practice_time_and_clear() {
+    practice_game *pg = calloc(1, sizeof(practice_game));
+    pg->num_deals = 3;
+    pg->delay = 100;
+    pg->incoming = 100;
+
+    step_practice(pg, 0, 0);
+    print_practice(pg);
+    assert(pg->delay == 99);
+    step_practice(pg, 0, 0);
+    assert(pg->delay == 97);
+    assert(pg->player.all_clear_bonus);
+    print_practice(pg);
+    step_practice(pg, 0, 0);
+    print_practice(pg);
+    step_practice(pg, 0, 0);
+    print_practice(pg);
+    print_deals(pg->deals, pg->num_deals);
+    assert(pg->delay == 94);
+    assert(pg->incoming < 80);
+}
+
 // XXX: This test is broken.
 void test_max_score() {
     jkiss_seed(100);
@@ -391,4 +413,5 @@ void test_all() {
     test_mirror_game();
     test_game_symmetry();
     test_game_all_clear();
+    test_practice_time_and_clear();
 }

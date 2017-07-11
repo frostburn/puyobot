@@ -21,6 +21,7 @@ typedef struct player
 typedef struct practice_game
 {
     player player;
+    int time;
     int delay;
     int incoming;
     int num_deals;
@@ -29,11 +30,12 @@ typedef struct practice_game
 
 typedef struct game
 {
-    int num_players;
     player *players;
+    content_t *deals;
+    int time;
+    int num_players;
     int num_deals;
     int total_num_deals;
-    content_t *deals;
 } game;
 
 void print_player(player *p) {
@@ -87,10 +89,11 @@ void clear_player(player *p) {
     p->nuisance_x = 0;
 }
 
-int send_nuisance(player *p, int score) {
+int send_nuisance(player *p) {
     // Send garbage
-    int nuisance_sent = (score + p->leftover_score) / TARGET_SCORE;
-    p->leftover_score = (score + p->leftover_score) % TARGET_SCORE;
+    int nuisance_sent = (p->chain_score + p->leftover_score) / TARGET_SCORE;
+    p->leftover_score = (p->chain_score + p->leftover_score) % TARGET_SCORE;
+    p->chain_score = 0;
     // Offset garbage
     if (p->pending_nuisance >= nuisance_sent) {
         p->pending_nuisance -= nuisance_sent;
@@ -150,6 +153,13 @@ int step_player(player *p) {
             p->chain_all_clear_bonus = 1;
         }
     } else {
+        if (p->chain) {
+            if (p->all_clear_bonus) {
+                p->chain_score += MAX_NUISANCE_ROWS * WIDTH * TARGET_SCORE;
+            }
+            p->all_clear_bonus = p->chain_all_clear_bonus;
+            p->chain_all_clear_bonus = 0;
+        }
         p->chain = 0;
     }
     return score;
@@ -165,13 +175,7 @@ void step_game(game *g, content_t *choices) {
             step_player(p);
             has_stepped[i] = 1;
             if (!p->chain) {
-                if (p->all_clear_bonus) {
-                    p->chain_score += MAX_NUISANCE_ROWS * WIDTH * TARGET_SCORE;
-                }
-                p->all_clear_bonus = p->chain_all_clear_bonus;
-                p->chain_all_clear_bonus = 0;
-                int nuisance_sent = send_nuisance(p, p->chain_score);
-                p->chain_score = 0;
+                int nuisance_sent = send_nuisance(p);
                 for (int j = 0; j < g->num_players; ++j) {
                     if (j != i) {
                         g->players[j].pending_nuisance += nuisance_sent;
@@ -220,6 +224,7 @@ void step_game(game *g, content_t *choices) {
             clear_player(g->players + i);
         }
     }
+    ++g->time;
 }
 
 practice_game* game_as_practice(game *g, int player_index) {
@@ -230,6 +235,7 @@ practice_game* game_as_practice(game *g, int player_index) {
     // Multiple opponents would require multiple incomming channels for practice.
     assert(g->num_players == 2);  // Limit to two for now.
     practice_game *pg = calloc(1, sizeof(practice_game));
+    pg->time = g->time;
     pg->num_deals = g->num_deals;
     pg->player = g->players[player_index];
     for (int j = 0; j < g->num_deals; ++j) {
@@ -256,7 +262,7 @@ practice_game* game_as_practice(game *g, int player_index) {
             // All clear reset omitted.
             // opponent.all_clear_bonus = opponent.chain_all_clear_bonus;
             // opponent.chain_all_clear_bonus = 0;
-            int nuisance = send_nuisance(&opponent, opponent.chain_score);
+            int nuisance = send_nuisance(&opponent);
             pg->delay = delay;
             pg->incoming = nuisance;
         }
@@ -288,10 +294,13 @@ double step_practice(void *_pg, content_t deal, content_t choice) {
     }
     // Assume deal is pg->deals[0] for now.
     int valid = apply_deal_and_choice(s, deal, choice);
-    int chain_score = resolve(s, NULL) + DROP_SCORE;
-    score += chain_score;
-    pg->player.total_score += chain_score;
-    int outgoing = send_nuisance(&pg->player, chain_score);
+    do {
+        step_player(&pg->player);
+        ++pg->time;
+        --pg->delay;
+    } while (pg->player.chain);
+    score += pg->player.chain_score;
+    int outgoing = send_nuisance(&pg->player);
     receive_nuisance(&pg->player);
     handle_gravity(s);
     pg->incoming -= outgoing;
@@ -305,7 +314,6 @@ double step_practice(void *_pg, content_t deal, content_t choice) {
         score = -DEATH_SCORE;
     }
     append_practice_deal(pg, rand_piece());
-    --pg->delay;
     if (pg->delay < 0) {
         pg->delay = 0;
     }

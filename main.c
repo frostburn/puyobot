@@ -14,6 +14,7 @@
 #include "state.c"
 
 #include "deal.c"
+#include "todo.c"
 #include "eval.c"
 #include "multiplayer.c"
 #include "tree.c"

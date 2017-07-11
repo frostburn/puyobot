@@ -128,12 +128,13 @@ class Player(object):
         return string
 
 class Game(object):
-    fstring = "iPiiP"
+    fstring = "PPiiii"
 
     def __init__(self, json=None):
         if not json:
             return
         self.num_deals = json['numDeals']
+        self.time = json['time']
         self.deals = [Deal(d) for d in json['deals']]
         self.players = [Player(p) for p in json['childStates']]
 
@@ -141,7 +142,7 @@ class Game(object):
     def unpack(cls, string):
         size = struct.calcsize(cls.fstring)
         string, game_string = string[size:], string[:size]
-        num_players, _, num_deals, total_num_deals, _ = struct.unpack(cls.fstring, game_string)
+        _, _, time, num_players, num_deals, total_num_deals = struct.unpack(cls.fstring, game_string)
         players = []
         for _ in range(num_players):
             size = struct.calcsize(Player.fstring)
@@ -154,6 +155,7 @@ class Game(object):
             deals.append(Deal.unpack(deals_string))
 
         instance = cls()
+        instance.time = time
         instance.players = players
         instance.num_deals = num_deals
         instance.deals = deals
@@ -161,7 +163,7 @@ class Game(object):
         return instance
 
     def pack(self):
-        string = struct.pack(self.fstring, len(self.players), 0, self.num_deals, len(self.deals), 0)
+        string = struct.pack(self.fstring, 0, 0, self.time, len(self.players), self.num_deals, len(self.deals))
         for player in self.players:
             string += player.pack()
         for deal in self.deals:
