@@ -167,6 +167,9 @@ float evaluate(void *s, value_node *root, tree_options options) {
         root->value += root->deals[j].probability * deal_value;
     }
     root->evaluated = 1;
+    if (root->value == -INFINITY) {
+        root->value = -DEATH_SCORE;
+    }
     return root->value;
 }
 

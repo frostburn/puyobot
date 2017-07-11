@@ -7,7 +7,7 @@
 #define CHOICE_X_MASK (0x3f)
 #define COLOR1_MASK (15)
 #define COLOR2_SHIFT (4)
-#define DEATH_SCORE (1e44)
+#define DEATH_SCORE (1e13)
 
 typedef unsigned char content_t;
 typedef double (*step_fun)(void *s, content_t, content_t);
