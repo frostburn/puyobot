@@ -20,6 +20,8 @@
 #include "tree.c"
 #include "template.c"
 #include "template_gen.c"
+#include "harassment.c"
+#include "complex_policy.c"
 #include "demo.c"
 #include "test.c"
 #include "benchmark.c"
@@ -28,29 +30,6 @@
 void init_all() {
     jkiss_init();
     init_tetrominoes();
-}
-
-content_t gcn_game_policy(game *g, int player_index) {
-    practice_game *pg = game_as_practice(g, player_index);
-    if (!pg) {
-        return CHOICE_PASS;
-    }
-    content_t choice = gcn_practice_policy(pg, pg->deals, pg->num_deals);
-    free(pg);
-    return choice;
-}
-
-content_t mc_game_policy(game *g, int player_index) {
-    practice_game *pg = game_as_practice(g, player_index);
-    if (!pg) {
-        return CHOICE_PASS;
-    }
-    mc_options options = simple_mc_options(10000, random_policy);
-    options.step = step_practice;
-    options.copy = copy_practice;
-    content_t choice = iterate_mc(pg, pg->deals, pg->num_deals, options);
-    free(pg);
-    return choice;
 }
 
 int main(int argc, char *argv[]) {
@@ -62,15 +41,17 @@ int main(int argc, char *argv[]) {
     }
 
     game *g = new_game(2, 3);
-    for (int i = 0; i < 1000; ++i) {
+    for (int i = 0; i < 10000; ++i) {
         content_t choices[2] = {
             gcn_game_policy(g, 0),
-            mc_game_policy(g, 1)
+            gcnk_game_policy(g, 1),
         };
         step_game(g, choices);
         print_player(g->players);
+        print_deals(g->deals + g->players[0].deal_index, g->num_deals);
         print_player(g->players + 1);
-        usleep(50000);
+        print_deals(g->deals + g->players[1].deal_index, g->num_deals);
+        //usleep(50000);
     }
     return 0;
 }

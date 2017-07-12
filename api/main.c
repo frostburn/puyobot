@@ -18,6 +18,9 @@
 #include "../tree.c"
 #include "../template.c"
 #include "../template_gen.c"
+#include "../todo.c"
+#include "../harassment.c"
+#include "../complex_policy.c"
 
 void write_game(game *g, FILE *f) {
     fwrite(g, sizeof(game), 1, f);
@@ -33,29 +36,6 @@ game* read_game(FILE *f) {
     assert(fread(g->players, sizeof(player), g->num_players, f));
     assert(fread(g->deals, sizeof(content_t), g->total_num_deals, f));
     return g;
-}
-
-content_t gcn_game_policy(game *g, int player_index) {
-    practice_game *pg = game_as_practice(g, player_index);
-    if (!pg) {
-        return CHOICE_PASS;
-    }
-    content_t choice = gcn_practice_policy(pg, pg->deals, pg->num_deals);
-    free(pg);
-    return choice;
-}
-
-content_t mc_game_policy(game *g, int player_index) {
-    practice_game *pg = game_as_practice(g, player_index);
-    if (!pg) {
-        return CHOICE_PASS;
-    }
-    mc_options options = simple_mc_options(10000, random_policy);
-    options.step = step_practice;
-    options.copy = copy_practice;
-    content_t choice = iterate_mc(pg, pg->deals, pg->num_deals, options);
-    free(pg);
-    return choice;
 }
 
 void init_all() {

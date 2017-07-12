@@ -156,6 +156,7 @@ int step_player(player *p) {
         if (p->chain) {
             if (p->all_clear_bonus) {
                 p->chain_score += MAX_NUISANCE_ROWS * WIDTH * TARGET_SCORE;
+                p->total_score += MAX_NUISANCE_ROWS * WIDTH * TARGET_SCORE;
             }
             p->all_clear_bonus = p->chain_all_clear_bonus;
             p->chain_all_clear_bonus = 0;
@@ -220,8 +221,15 @@ void step_game(game *g, content_t *choices) {
         }
     }
     if (game_over) {
+        int max_index = 0;
         for (int i = 0; i < g->num_players; ++i) {
             clear_player(g->players + i);
+            if (g->players[i].deal_index > max_index) {
+                max_index = g->players[i].deal_index;
+            }
+        }
+        for (int i = 0; i < g->num_players; ++i) {
+            g->players[i].deal_index = max_index;
         }
     }
     ++g->time;

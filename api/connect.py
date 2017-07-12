@@ -2,6 +2,7 @@ from time import sleep
 import struct
 import subprocess
 import argparse
+import os
 import requests
 
 NUM_FLOORS = 2
@@ -210,6 +211,8 @@ def main(command, url, autojoin=False):
                     # TODO: Use sockets instead of files to communicate.
                     with open("in.bin", "wb") as f:
                         f.write(game.pack())
+                    if os.path.exists("out.bin"):
+                        os.remove("out.bin")
                     subprocess.call([command, str(player)])
                     with open("out.bin", "rb") as f:
                         game = Game.unpack(f.read())
@@ -221,10 +224,11 @@ def main(command, url, autojoin=False):
                     }
                     response = requests.post('{}/play/{}'.format(url, uuid), json=event)
                     if not response.json()['success']:
+                        print ('bad blocks', blocks)
                         # The bots pick badly sometimes so we need to suicide like this
                         for i in range(WIDTH - 1):
                             suicide = ([0] * i) + deal.blocks + ([0] * (WIDTH - i - 2))
-                            print (suicide)
+                            print ('suicide attempt', suicide)
                             event = {
                                 'type': 'addPuyos',
                                 'blocks': suicide,

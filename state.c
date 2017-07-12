@@ -296,9 +296,11 @@ void get_state_mask(state *s, puyos_t *out) {
 }
 
 int state_is_full(state *s) {
-    puyos_t all[2];
-    get_state_mask(s, all);
-    return !(GHOST_LINE & ~all[0]);
+    puyos_t all = 0;
+    for (int i = 0; i < NUM_COLORS; ++i) {
+        all |= s->floors[0][i];
+    }
+    return !(GHOST_LINE & ~all);
 }
 
 void assert_sanity(state *s) {
