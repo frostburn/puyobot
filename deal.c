@@ -66,6 +66,9 @@ content_t rand_choice(content_t min_x, content_t max_x) {
 }
 
 int apply_deal_and_choice(state *s, content_t deal, content_t choice) {
+    if (choice == CHOICE_PASS) {
+        return 0;
+    }
     content_t color1 = deal & COLOR1_MASK;
     content_t color2 = deal >> COLOR2_SHIFT;
     content_t orientation = choice & ~CHOICE_X_MASK;
@@ -87,10 +90,6 @@ int apply_deal_and_choice(state *s, content_t deal, content_t choice) {
     for (int i = 0; i < NUM_COLORS; ++i) {
         all |= s->floors[0][i];
     }
-    puyos_t puyo1 = 1ULL << (color1_x + V_SHIFT * color1_y);
-    s->floors[0][color1] |= puyo1;
-    puyos_t puyo2 = 1ULL << (color2_x + V_SHIFT * color2_y);
-    s->floors[0][color2] |= puyo2;
 
     if (
         ((1ULL << (color1_x + V_SHIFT * GHOST_Y)) & all) &&
@@ -98,6 +97,12 @@ int apply_deal_and_choice(state *s, content_t deal, content_t choice) {
     ) {
         return 0;
     }
+
+    puyos_t puyo1 = 1ULL << (color1_x + V_SHIFT * color1_y);
+    s->floors[0][color1] |= puyo1;
+    puyos_t puyo2 = 1ULL << (color2_x + V_SHIFT * color2_y);
+    s->floors[0][color2] |= puyo2;
+
     return 1;
 }
 

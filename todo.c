@@ -127,3 +127,31 @@ int max_score(state *s, content_t *deals, int num_deals, int num_turns) {
     free(c);
     return score;
 }
+
+double best_random_score(practice_game *pg, int iterations, int turns) {
+    iterations /= 16;
+    double best = -INFINITY;
+    #ifdef _OPENMP
+    #pragma omp parallel for
+    #endif
+    for (int k = 0; k < 16; ++k) {
+        practice_game *c = malloc(sizeof(practice_game));
+        for (int j = 0; j < iterations; ++j) {
+            memcpy(c, pg, sizeof(practice_game));
+            double score = 0;
+            for (int i = 0; i < turns; ++i) {
+                content_t choice = random_but_alive_policy(&c->player.state, c->deals, c->num_deals);
+                score += step_practice(c, c->deals[0], choice);
+            }
+            #ifdef _OPENMP
+            #pragma omp critical
+            #endif
+            {
+                if (score > best) {
+                    best = score;
+                }
+            }
+        }
+    }
+    return best;
+}

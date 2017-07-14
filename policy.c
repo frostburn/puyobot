@@ -4,6 +4,25 @@ content_t random_policy(void *s, content_t *deals, int  num_deals) {
     return CHOICES[jrand() % NUM_CHOICES];
 }
 
+content_t random_but_alive_policy(void *s, content_t *deals, int  num_deals) {
+    state *c = copy_state(s);
+    unsigned int legal = (1 << NUM_CHOICES) - 1;
+    while (legal) {
+        int index = jrand() % NUM_CHOICES;
+        while (!(legal & (1 << index))) {
+            index = (index + 1) % NUM_CHOICES;
+        }
+        content_t choice = CHOICES[index];
+        if (apply_deal_and_choice(c, deals[0], choice)) {
+            free(c);
+            return choice;
+        }
+        legal ^= 1 << index;
+    }
+    free(c);
+    return CHOICE_PASS;
+}
+
 content_t euler_policy(void *s, content_t *deals, int  num_deals) {
     double weights[NUM_CHOICES];
     double total_weight = 0;
