@@ -158,23 +158,65 @@ double knockout_score(int incoming, int delay, knockout_context *context) {
     };
     value_node *root = make_full_tree(pg.num_deals, options.depth);
     solve_tree(&pg, root, pg.deals, pg.num_deals, options);
+    score = root->value;
+    free_tree(root);
     #ifdef _OPENMP
     #pragma omp critical(knockout_update)
     #endif
     {
-        context->scores[delay][incoming] = root->value;
+        context->scores[delay][incoming] = score;
     }
-    free_tree(root);
-    return context->scores[delay][incoming];
+    return score;
+}
+
+double random_knockout_score(int iterations, int turns, int incoming, int delay, knockout_context *context) {
+    assert(incoming >= 0);
+    assert(delay >= 0);
+    if (incoming >= MAX_HARASSMENT) {
+        incoming = MAX_HARASSMENT - 1;
+    }
+    if (delay >= MAX_DELAY) {
+        delay = MAX_DELAY - 1;
+    }
+
+    double score;
+    #ifdef _OPENMP
+    #pragma omp critical(knockout_update)
+    #endif
+    {
+        score = context->scores[delay][incoming];
+    }
+    if (!isnan(score)) {
+        return score;
+    }
+
+    practice_game pg = context->pg;
+    pg.delay += delay;
+    pg.incoming += incoming;
+    score = best_random_score(&context->pg, iterations, turns);
+    #ifdef _OPENMP
+    #pragma omp critical(knockout_update)
+    #endif
+    {
+        context->scores[delay][incoming] = score;
+    }
+    return score;
 }
 
 // Assumes that the practice game was started with time=0 and score=0
-double eval_knockout_prototype(void *_pg, knockout_context *context) {
-    practice_game *pg = _pg;
+double eval_knockout_prototype(practice_game *pg, knockout_context *context) {
     int delay = pg->time;
     int score = pg->player.total_score + pg->player.leftover_score;  // No exactly precise but close enough.
     int outgoing = score / TARGET_SCORE;
     return -knockout_score(outgoing, delay, context);
+}
+
+double eval_random_knockout_prototype(practice_game *pg, int iterations, int turns, knockout_context *context) {
+    int delay = pg->time;
+    int score = pg->player.total_score + pg->player.leftover_score;  // No exactly precise but close enough.
+    int outgoing = score / TARGET_SCORE;
+
+    return -random_knockout_score(iterations, turns, outgoing, delay, context);
 }
 
 knockout_context* new_knockout(game *g, int opponent_index) {
@@ -193,7 +235,15 @@ knockout_context* new_knockout(game *g, int opponent_index) {
     }
     pg.time = time;
     pg.delay = -time;
-    pg.incoming = -(pg.player.chain_score + pg.player.leftover_score) / TARGET_SCORE;
+    int outgoing = (pg.player.chain_score + pg.player.leftover_score) / TARGET_SCORE;
+    if (outgoing >= pg.player.pending_nuisance) {
+        outgoing -= pg.player.pending_nuisance;
+        pg.player.pending_nuisance = 0;
+    } else {
+        pg.player.pending_nuisance -= outgoing;
+        outgoing = 0;
+    }
+    pg.incoming = -outgoing;
     pg.player.leftover_score = (pg.player.chain_score + pg.player.leftover_score) % TARGET_SCORE;
     pg.player.chain_score = 0;
     pg.player.total_score = 0;

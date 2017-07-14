@@ -14,12 +14,12 @@
 #include "state.c"
 
 #include "deal.c"
-#include "todo.c"
 #include "eval.c"
 #include "multiplayer.c"
 #include "tree.c"
 #include "template.c"
 #include "template_gen.c"
+#include "todo.c"
 #include "harassment.c"
 #include "complex_policy.c"
 #include "demo.c"

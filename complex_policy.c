@@ -32,8 +32,10 @@ content_t gcnk_game_policy(game *g, int player_index) {
     tree_options options;
     content_t choice = CHOICE_PASS;
 
+    int iterations = 1000;
+    int turns = 30;
     double eval_early(void *pg) {
-        return eval_knockout_prototype(pg, context);
+        return eval_random_knockout_prototype(pg, iterations, turns, context);
     }
     options = simple_tree_options(eval_early, 0, 1);
     options.step = step_practice;
@@ -59,18 +61,16 @@ content_t gcnk_game_policy(game *g, int player_index) {
         double groups = eval_groups(s);
         double chains = eval_groups(s);
         double nuisance = popcount(s->floors[0][GARBAGE]) + popcount(s->floors[1][GARBAGE]);
-        double knockout = eval_knockout_prototype(pg, context);
-        double dead = eval_dead(pg);
+        double knockout = eval_random_knockout_prototype(pg, iterations, turns, context);
         return 
             1 * groups +
             20 * chains + 
             (-0.96) * nuisance +
             (-4.0 - 1.0 / (pg->delay + 2)) * pg->incoming +
-            0.00001 * knockout +
-            dead;
+            0.00001 * knockout;
     }
 
-    options = simple_tree_options(eval, 1, 0.4);
+    options = simple_tree_options(eval, 1, 0.5);
     options.step = step_practice;
     options.copy = copy_practice;
     choice = solve(pg, pg->deals, pg->num_deals, options);
