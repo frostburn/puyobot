@@ -32,8 +32,8 @@ content_t gcnk_game_policy(game *g, int player_index) {
     tree_options options;
     content_t choice = CHOICE_PASS;
 
-    int iterations = 1000;
-    int turns = 30;
+    int iterations = 10000;
+    int turns = 25;
     double eval_early(void *pg) {
         return eval_random_knockout_prototype(pg, iterations, turns, context);
     }

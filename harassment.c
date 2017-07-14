@@ -171,7 +171,11 @@ double knockout_score(int incoming, int delay, knockout_context *context) {
 
 double random_knockout_score(int iterations, int turns, int incoming, int delay, knockout_context *context) {
     assert(incoming >= 0);
-    assert(delay >= 0);
+    int double_checking = 0;
+    if (delay <= 0) {
+        delay = -delay;
+        double_checking = 1;
+    }
     if (incoming >= MAX_HARASSMENT) {
         incoming = MAX_HARASSMENT - 1;
     }
@@ -194,11 +198,24 @@ double random_knockout_score(int iterations, int turns, int incoming, int delay,
     pg.delay += delay;
     pg.incoming += incoming;
     score = best_random_score(&context->pg, iterations, turns);
+    // Death is a serious thing. Make sure.
+    if (score < 0) {
+        double check_score = best_random_score(&context->pg, iterations, turns);
+        if (check_score > score) {
+            score = check_score;
+        }
+    }
     #ifdef _OPENMP
     #pragma omp critical(knockout_update)
     #endif
     {
         context->scores[delay][incoming] = score;
+    }
+    if (score < 0 && !double_checking && incoming) {
+        double check_score = random_knockout_score(iterations, turns, incoming - 1, -delay, context);
+        if (check_score >= 0) {
+            return 0;
+        }
     }
     return score;
 }
