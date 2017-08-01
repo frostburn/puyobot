@@ -65,7 +65,7 @@ int handle_bottom_gravity(puyos_t *floor, int num_colors) {
         all = 0;
         for (int i = 0; i < num_colors; ++i) {
             falling = floor[i] & ~bellow;
-            floor[i] = (falling << V_SHIFT) | (floor[i] & ~falling);
+            floor[i] = (falling << V_SHIFT) | (floor[i] & bellow);
             all |= floor[i];
         }
         ++iterations;

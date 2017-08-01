@@ -232,7 +232,7 @@ int handle_gravity(state *s) {
         all[1] = 0;
         for (int i = 0; i < NUM_COLORS; ++i) {
             falling = s->floors[1][i] & ~bellow;
-            s->floors[1][i] = (falling << V_SHIFT) | (s->floors[1][i] & ~falling);
+            s->floors[1][i] = (falling << V_SHIFT) | (s->floors[1][i] & bellow);
             all[1] |= s->floors[1][i];
         }
 
@@ -243,7 +243,7 @@ int handle_gravity(state *s) {
 
             s->floors[1][i] |= (falling & BOTTOM) >> TOP_TO_BOTTOM;
 
-            s->floors[0][i] = (falling << V_SHIFT) | (s->floors[0][i] & ~falling);
+            s->floors[0][i] = (falling << V_SHIFT) | (s->floors[0][i] & bellow);
             all[0] |= s->floors[0][i];
         }
         ++iterations;

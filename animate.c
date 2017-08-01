@@ -57,7 +57,7 @@ void animate_gravity(state *s, void (*callback)(state*)) {
         all[1] = 0;
         for (int i = 0; i < NUM_COLORS; ++i) {
             falling = s->floors[1][i] & ~bellow;
-            s->floors[1][i] = (falling << V_SHIFT) | (s->floors[1][i] & ~falling);
+            s->floors[1][i] = (falling << V_SHIFT) | (s->floors[1][i] & bellow);
             all[1] |= s->floors[1][i];
         }
 
@@ -68,7 +68,7 @@ void animate_gravity(state *s, void (*callback)(state*)) {
 
             s->floors[1][i] |= (falling & BOTTOM) >> TOP_TO_BOTTOM;
 
-            s->floors[0][i] = (falling << V_SHIFT) | (s->floors[0][i] & ~falling);
+            s->floors[0][i] = (falling << V_SHIFT) | (s->floors[0][i] & bellow);
             all[0] |= s->floors[0][i];
         }
         callback(s);
@@ -136,7 +136,7 @@ int animate_bottom_gravity(puyos_t *floor, int num_links, int num_colors, void (
         all = 0;
         for (int i = 0; i < num_colors; ++i) {
             falling = floor[i] & ~bellow;
-            floor[i] = (falling << V_SHIFT) | (floor[i] & ~falling);
+            floor[i] = (falling << V_SHIFT) | (floor[i] & bellow);
             all |= floor[i];
         }
         ++iterations;

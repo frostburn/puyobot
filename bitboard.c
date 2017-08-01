@@ -298,7 +298,7 @@ int euler(puyos_t puyos) {
 puyos_t drop_once(puyos_t puyos) {
     puyos_t bellow = (puyos >> V_SHIFT) | BOTTOM;
     puyos_t falling = puyos & ~bellow;
-    return (falling << V_SHIFT) | (puyos & ~falling);
+    return (falling << V_SHIFT) | (puyos & bellow);
 }
 
 int num_groups(puyos_t puyos) {
