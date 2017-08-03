@@ -1,6 +1,7 @@
 ADD_LIBRARY(
   puyobot
   bitboard.c
+  bottom.c
 )
 INSTALL(
   DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../include/puyobot

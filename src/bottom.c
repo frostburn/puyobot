@@ -1,4 +1,6 @@
-#define MAX_BOTTOM_CHAIN ((WIDTH * HEIGHT) / CLEAR_THRESHOLD)
+#include <string.h>
+
+#include "puyobot/bottom.h"
 
 char color_label(int color) {
     int c = '0' + color;
