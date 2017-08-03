@@ -5,10 +5,10 @@
 
 #include "jkiss/jkiss.h"
 
-#define WIDTH (6)
-#define HEIGHT (10)
+#include "puyobot/constants.h"
+
 #define H_SHIFT (1)
-#define V_SHIFT (6)
+#define V_SHIFT (WIDTH)
 #define FULL (0xfffffffffffffffULL)
 #define TOP (0x3fULL)
 #define BOTTOM (0xfc0000000000000ULL)
@@ -20,16 +20,9 @@
 #define RIGHT_SIDE (0xe38e38e38e38e38ULL)
 #define TOP_TO_BOTTOM (V_SHIFT * (HEIGHT - 1))
 
-#define GHOST_Y (7)
 #define DEATH_BLOCK (0x3ffffffffffULL)
 #define GHOST_LINE (0xfc0000000000ULL)
 #define LIFE_BLOCK (0xfff000000000000ULL)
-#define LIFE_HEIGHT (12)
-
-#define TOTAL_SPACE (WIDTH * (LIFE_HEIGHT + 1))
-
-#define NUM_FLOORS (2)
-#define TOTAL_HEIGHT (20)
 
 #define MAX_GROUPS (WIDTH * LIFE_HEIGHT / 2)  // Assuming even width and height
 

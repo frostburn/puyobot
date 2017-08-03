@@ -4,11 +4,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#include "puyobot/constants.h"
 #include "puyobot/bitboard.h"
-
-#ifndef CLEAR_THRESHOLD
-    #define CLEAR_THRESHOLD (4)
-#endif
 
 #define MAX_BOTTOM_CHAIN ((WIDTH * HEIGHT) / CLEAR_THRESHOLD)
 
