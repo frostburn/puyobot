@@ -3,6 +3,7 @@ ADD_LIBRARY(
   bitboard.c
   bottom.c
   deal.c
+  tablebase.c
 )
 INSTALL(
   DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../include/puyobot

@@ -31,4 +31,6 @@ content_t make_choice(int *x, int *orientation);
 
 content_t rand_choice(content_t min_x, content_t max_x);
 
+void print_deals(content_t *deals, int num_deals);
+
 #endif

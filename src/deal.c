@@ -54,3 +54,14 @@ content_t rand_choice(content_t min_x, content_t max_x) {
     }
     return (min_x + (jrand() % (1 + max_x - min_x))) | rotation;
 }
+
+void print_deals(content_t *deals, int num_deals) {
+    for (int i = 0; i < num_deals; ++i) {
+        content_t color1 = deal_color1(deals[i]);
+        content_t color2 = deal_color2(deals[i]);
+        printf("\x1b[3%d;1m ●", color1 + 1);
+        printf("\x1b[3%d;1m ●", color2 + 1);
+        printf("  ");
+    }
+    printf("\x1b[0m\n");
+}
