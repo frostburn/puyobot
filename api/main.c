@@ -6,7 +6,8 @@
 #include <string.h>
 
 #include "../constants.c"
-#include "../jkiss.c"
+#include "..jkiss/include/jkiss/jkiss.h"
+#include "..jkiss/src/jkiss.c"  // TODO: Use CMake
 #include "../util.c"
 #include "../bitboard.c"
 #include "../scoring.c"

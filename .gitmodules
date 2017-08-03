@@ -1,0 +1,3 @@
+[submodule "jkiss"]
+	path = jkiss
+	url = git@github.com:frostburn/jkiss.git

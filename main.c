@@ -7,7 +7,8 @@
 #include <unistd.h>
 
 #include "constants.c"
-#include "jkiss.c"
+#include "jkiss/include/jkiss/jkiss.h"
+#include "jkiss/src/jkiss.c"
 #include "util.c"
 #include "bitboard.c"
 #include "scoring.c"
