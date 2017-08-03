@@ -1,4 +1,8 @@
-typedef unsigned long long int puyos_t;
+#include <stdio.h>
+
+#include "jkiss/jkiss.h"
+
+#include "puyobot/bitboard.h"
 
 void fprint_puyos(FILE *f, puyos_t puyos) {
     fprintf(f, " ");

@@ -1,3 +1,6 @@
 [submodule "jkiss"]
 	path = jkiss
 	url = git@github.com:frostburn/jkiss.git
+[submodule "full-dict"]
+	path = full-dict
+	url = git@github.com:frostburn/full-dict.git
