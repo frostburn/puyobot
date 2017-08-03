@@ -6,6 +6,7 @@
 
 #include "puyobot/constants.h"
 #include "puyobot/bitboard.h"
+#include "puyobot/deal.h"
 
 #define MAX_BOTTOM_CHAIN ((WIDTH * HEIGHT) / CLEAR_THRESHOLD)
 
@@ -24,5 +25,7 @@ int resolve_bottom(puyos_t *floor, int num_colors, int *color_order);
 char* color_conflicts(puyos_t *floor, int num_colors);
 
 void print_conflicts(char* conflicts, int num_colors);
+
+int bottom_deal_and_choice(puyos_t *floor, content_t deal, content_t choice);
 
 #endif

@@ -153,3 +153,41 @@ void print_conflicts(char* conflicts, int num_colors) {
         printf("\n");
     }
 }
+
+int bottom_deal_and_choice(puyos_t *floor, content_t deal, content_t choice) {
+    if (choice == CHOICE_PASS) {
+        return 0;
+    }
+    content_t color1 = deal & COLOR1_MASK;
+    content_t color2 = deal >> COLOR2_SHIFT;
+    content_t orientation = choice & ~CHOICE_X_MASK;
+    content_t color1_x = choice & CHOICE_X_MASK;
+    content_t color2_x = color1_x;
+    content_t color1_y = 0;
+    content_t color2_y = 1;
+    if (orientation == CHOICE_90) {
+        color2_x++;
+        color2_y--;
+    } else if (orientation == CHOICE_180) {
+        color1_y++;
+        color2_y--;
+    } else if (orientation == CHOICE_270) {
+        color1_x++;
+        color2_y--;
+    }
+
+    puyos_t puyo1 = 1ULL << (color1_x + V_SHIFT * color1_y);
+    puyos_t puyo2 = 1ULL << (color2_x + V_SHIFT * color2_y);
+
+    puyos_t piece = puyo1 | puyo2;
+    for (int i = 0; i < NUM_DEAL_COLORS; ++i) {
+        if (piece & floor[i]) {
+            return 0;
+        }
+    }
+
+    floor[color1] |= puyo1;
+    floor[color2] |= puyo2;
+
+    return 1;
+}
