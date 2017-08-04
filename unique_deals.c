@@ -4,6 +4,18 @@
 #include "full-dict/full.h"
 
 #include "puyobot/tablebase.h"
+#include "puyobot/util.h"
+
+void print_results(FullDict *dict, int num_deals) {
+    content_t deals[num_deals];
+    keys_t *keys = dict->keys;
+    for (size_t i = 0; i < dict->num_keys; ++i) {
+        keys_t key = keys[i];
+        deals_from_key(deals, num_deals, key);
+        print_deals(deals, num_deals);
+    }
+    printf("Number of unique sequences with %d pieces of %d colors = %zu\n", num_deals, NUM_DEAL_COLORS, dict->num_keys);
+}
 
 int main(int argc, char *argv[]) {
     if (argc < 2) {
@@ -11,6 +23,25 @@ int main(int argc, char *argv[]) {
         return 1;
     }
     int num_deals = atoi(argv[1]);
+    FullDict *dict;
+
+    if (num_deals <= 0) {
+        if (argc < 3) {
+            printf("Missing filename to load\n");
+            return 1;
+        }
+        dict = malloc(sizeof(FullDict));
+        char *buffer = file_to_buffer(argv[2]);
+        char *buffer_start = buffer;
+        num_deals = *((int*)buffer);
+        buffer += sizeof(int);
+        full_dict_associate(dict, compare_keys, buffer);
+        print_results(dict, num_deals);
+        free(dict);
+        free(buffer_start);
+        return 1;
+    }
+
     content_t deals[num_deals];
     keys_t num_all = 1;
     for (int i = 0; i < num_deals; ++i) {
@@ -21,10 +52,18 @@ int main(int argc, char *argv[]) {
 
     puyos_t *floor = calloc(NUM_DEAL_COLORS, sizeof(puyos_t));
 
-    FullDict *dict = full_dict_new(sizeof(keys_t), compare_keys);
+    dict = full_dict_new(sizeof(keys_t), compare_keys);
     for (keys_t i = 0; i < num_all; ++i) {
         if (i % 10000 == 0) {
             printf("%.1f %%\n", 100.0 * i / num_all);
+        }
+        if ((i + 1) % 1000000 == 0) {
+            printf("Writing a backup just in case...\n");
+            full_dict_finalize(dict);
+            FILE *f = fopen(argv[2], "w");
+            fwrite((void*) &num_deals, sizeof(int), 1, f);
+            full_dict_write(dict, f);
+            fclose(f);
         }
         deals_from_key(deals, num_deals, i);
         canonize_deals(deals, num_deals);
@@ -34,13 +73,16 @@ int main(int argc, char *argv[]) {
     free(floor);
     full_dict_finalize(dict);
 
-    keys_t *keys = dict->keys;
-    for (size_t i = 0; i < dict->num_keys; ++i) {
-        keys_t key = keys[i];
-        deals_from_key(deals, num_deals, key);
-        print_deals(deals, num_deals);
+    print_results(dict, num_deals);
+
+    if (argc > 2) {
+        printf("Saving the result...\n");
+        FILE *f = fopen(argv[2], "w");
+        fwrite((void*) &num_deals, sizeof(int), 1, f);
+        full_dict_write(dict, f);
+        fclose(f);
     }
-    printf("Number of unique sequences with %d pieces of %d colors = %zu\n", num_deals, NUM_DEAL_COLORS, dict->num_keys);
+
     full_dict_delete(dict);
 
     return 0;
