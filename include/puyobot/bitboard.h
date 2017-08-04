@@ -3,8 +3,6 @@
 
 #include <stdio.h>
 
-#include "jkiss/jkiss.h"
-
 #include "puyobot/constants.h"
 
 #define H_SHIFT (1)
@@ -85,14 +83,6 @@ int euler(puyos_t puyos);
 int num_groups(puyos_t puyos);
 
 int num_groups_2(puyos_t *puyos, puyos_t *groups);
-
-/* Arrange the N elements of ARRAY in random order.
-   Only effective if N is much smaller than RAND_MAX;
-   if this may not be the case, use a better random
-   number generator. */
-void shuffle(puyos_t *array, size_t n);
-
-void shuffle_2(puyos_t *array, size_t n);
 
 int gap_size(puyos_t puyos);
 

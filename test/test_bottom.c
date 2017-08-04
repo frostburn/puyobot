@@ -1,5 +1,7 @@
 #include <assert.h>
 
+#include "jkiss/jkiss.h"
+
 #include "puyobot/bottom.h"
 
 void playout() {

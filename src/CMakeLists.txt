@@ -4,6 +4,7 @@ ADD_LIBRARY(
   bottom.c
   deal.c
   tablebase.c
+  util.c
 )
 INSTALL(
   DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../include/puyobot

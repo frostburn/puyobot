@@ -1,7 +1,5 @@
 #include <stdio.h>
 
-#include "jkiss/jkiss.h"
-
 #include "puyobot/bitboard.h"
 
 void fprint_puyos(FILE *f, puyos_t puyos) {
@@ -358,36 +356,6 @@ int num_groups_2(puyos_t *puyos, puyos_t *groups) {
     }
     return num;
 }
-
-/* Arrange the N elements of ARRAY in random order.
-   Only effective if N is much smaller than RAND_MAX;
-   if this may not be the case, use a better random
-   number generator. */
-void shuffle(puyos_t *array, size_t n) {
-    if (n > 1) {
-        for (size_t i = 0; i < n - 1; ++i) {
-          size_t j = i + jrand() % (n - i);
-          puyos_t t = array[j];
-          array[j] = array[i];
-          array[i] = t;
-        }
-    }
-}
-
-void shuffle_2(puyos_t *array, size_t n) {
-    if (n > 1) {
-        for (size_t i = 0; i < n - 1; ++i) {
-          size_t j = i + jrand() % (n - i);
-          puyos_t t0 = array[2*j];
-          puyos_t t1 = array[2*j + 1];
-          array[2*j] = array[2*i];
-          array[2*i] = t0;
-          array[2*j + 1] = array[2*i + 1];
-          array[2*i + 1] = t1;
-        }
-    }
-}
-
 
 int gap_size(puyos_t puyos) {
     puyos = beam_up(puyos);
