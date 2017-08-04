@@ -95,3 +95,4 @@ int main(int argc, char *argv[]) {
 // Number of unique sequences with 5 pieces of 4 colors = 4427
 // Number of unique sequences with 6 pieces of 4 colors = 42699
 // Number of unique sequences with 7 pieces of 4 colors = 420779
+// Number of unique sequences with 8 pieces of 4 colors = 4183083
