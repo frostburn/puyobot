@@ -28,4 +28,6 @@ void print_conflicts(char* conflicts, int num_colors);
 
 int bottom_deal_and_choice(puyos_t *floor, content_t deal, content_t choice);
 
+void mirror_bottom(puyos_t *floor, int num_colors);
+
 #endif

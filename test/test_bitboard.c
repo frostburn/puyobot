@@ -54,8 +54,18 @@ void test_flood_2() {
     assert(j == num_clears);
 }
 
+void test_mirror() {
+    puyos_t puyos = 234928348972394;
+    print_puyos(puyos);
+    print_puyos(mirror_puyos(puyos));
+    for (int i = 0; i < WIDTH; ++i) {
+        assert(mirror_puyos(1ULL << i) == (1ULL << (WIDTH - 1 - i)));
+    }
+}
+
 int main() {
     test_euler();
     test_flood_2();
+    test_mirror();
     return 0;
 }

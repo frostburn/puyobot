@@ -191,3 +191,9 @@ int bottom_deal_and_choice(puyos_t *floor, content_t deal, content_t choice) {
 
     return 1;
 }
+
+void mirror_bottom(puyos_t *floor, int num_colors) {
+    for (int i = 0; i < num_colors; ++i) {
+        floor[i] = mirror_puyos(floor[i]);
+    }
+}

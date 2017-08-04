@@ -379,3 +379,9 @@ int gap_size_2(puyos_t * puyos) {
     beam_up_2(puyos);
     return gap_size(puyos[0]);
 }
+
+puyos_t mirror_puyos(puyos_t puyos) {
+    puyos_t result = ((LEFT_SIDE & puyos) << 3) | ((RIGHT_SIDE & puyos) >> 3);
+    result = ((MIRROR_DELTA_LEFT & result) << 2) | (MIRROR_DELTA_CENTER & result) | ((result >> 2) & MIRROR_DELTA_LEFT);
+    return result;
+}

@@ -22,6 +22,9 @@
 #define GHOST_LINE (0xfc0000000000ULL)
 #define LIFE_BLOCK (0xfff000000000000ULL)
 
+#define MIRROR_DELTA_LEFT (LEFT_WALL | (LEFT_WALL << 3))
+#define MIRROR_DELTA_CENTER ((LEFT_WALL << 1) | (LEFT_WALL << 4))
+
 #define MAX_GROUPS (WIDTH * LIFE_HEIGHT / 2)  // Assuming even width and height
 
 typedef unsigned long long int puyos_t;
@@ -87,5 +90,7 @@ int num_groups_2(puyos_t *puyos, puyos_t *groups);
 int gap_size(puyos_t puyos);
 
 int gap_size_2(puyos_t * puyos);
+
+puyos_t mirror_puyos(puyos_t puyos);
 
 #endif /* !PUYOBOT_BITBOARD_H_GUARD */

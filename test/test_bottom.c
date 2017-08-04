@@ -21,6 +21,9 @@ int main() {
     resolve_bottom(floor, 4, NULL);
     print_bottom(floor, 4);
     assert(floor[0] == 1ULL << (V_SHIFT * (HEIGHT - 2)));
+    mirror_bottom(floor, 4);
+    print_bottom(floor, 4);
+    assert(floor[0] == 1ULL << (WIDTH - 1 + V_SHIFT * (HEIGHT - 2)));
 
     playout();
 }
