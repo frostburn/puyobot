@@ -14,7 +14,7 @@ typedef struct TablePosition {
     puyos_t floor[NUM_DEAL_COLORS];
 } TablePosition;
 
-int has_clear_potential(content_t *deals, int num_deals);
+int has_clear_potential(TablePosition position);
 
 int search_for_clears(puyos_t *floor, content_t *deals, int num_deals);
 

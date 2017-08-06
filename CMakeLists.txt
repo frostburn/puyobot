@@ -20,6 +20,8 @@ ADD_SUBDIRECTORY(test)
 
 ADD_EXECUTABLE(unique_deals unique_deals.c)
 TARGET_LINK_LIBRARIES(unique_deals puyobot jkiss fulldict)
+ADD_EXECUTABLE(tabulate_openings tabulate_openings.c)
+TARGET_LINK_LIBRARIES(tabulate_openings puyobot jkiss fulldict)
 
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)

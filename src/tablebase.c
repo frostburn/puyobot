@@ -6,11 +6,14 @@
 #include "puyobot/tablebase.h"
 #include "puyobot/bottom.h"
 
-int has_clear_potential(content_t *deals, int num_deals) {
+int has_clear_potential(TablePosition position) {
     int counts[NUM_DEAL_COLORS] = {0};
-    for (int i = 0; i < num_deals; ++i) {
-        counts[deal_color1(deals[i])]++;
-        counts[deal_color2(deals[i])]++;
+    for (int i = 0; i < NUM_DEAL_COLORS; ++i) {
+        counts[i] += popcount(position.floor[i]);
+    }
+    for (int i = 0; i < position.num_deals; ++i) {
+        counts[deal_color1(position.deals[i])]++;
+        counts[deal_color2(position.deals[i])]++;
         int enough = 1;
         for (int j = 0; j < NUM_DEAL_COLORS; ++j) {
             if (counts[j] && counts[j] < CLEAR_THRESHOLD) {
