@@ -6,6 +6,18 @@
 #include "puyobot/tablebase.h"
 #include "puyobot/bottom.h"
 
+void print_table_position(TablePosition position) {
+    print_bottom(position.floor, NUM_DEAL_COLORS);
+    assert(position.num_deals <= MAX_TABLE_DEALS);
+    if (position.num_deals > 0) {
+        print_deals(position.deals, position.num_deals);
+    } else if (position.num_deals) {
+        printf("(terminal)\n");
+    } else {
+        printf("(invalid)\n");
+    }
+}
+
 int has_clear_potential(TablePosition position) {
     int counts[NUM_DEAL_COLORS] = {0};
     for (int i = 0; i < NUM_DEAL_COLORS; ++i) {
@@ -27,27 +39,45 @@ int has_clear_potential(TablePosition position) {
     return 0;
 }
 
-int search_for_clears(puyos_t *floor, content_t *deals, int num_deals) {
-    if (!num_deals) {
-        return 0;
+TablePosition table_position_apply_choice(TablePosition position, content_t choice) {
+    TablePosition child = position;
+    if (position.num_deals <= 0) {
+        child.num_deals = TABLE_POSITION_INVALID;
+        return child;
     }
-    puyos_t *child = malloc(NUM_DEAL_COLORS * sizeof(puyos_t));
-    int result = 0;
-    for (int i = 0; i < NUM_CHOICES; ++i) {
-        memcpy(child, floor, NUM_DEAL_COLORS * sizeof(puyos_t));
-        bottom_deal_and_choice(child, deals[0], CHOICES[i]);
-        resolve_bottom(child, NUM_DEAL_COLORS, NULL);
-        int any = 0;
-        for (int j = 0; j < NUM_DEAL_COLORS; ++j) {
-            any = (any || child[j]);
+    if (bottom_deal_and_choice(child.floor, position.deals[0], choice)) {
+        resolve_bottom(child.floor, NUM_DEAL_COLORS, NULL);
+        for (int j = 1; j < child.num_deals; ++j) {
+            child.deals[j - 1] = position.deals[j];
         }
-        if (!any || search_for_clears(child, deals + 1, num_deals - 1)) {
-            result = 1;
+        child.num_deals = position.num_deals - 1;
+    } else {
+        child.num_deals = TABLE_POSITION_INVALID;
+    }
+    return child;
+}
+
+int can_clear(TablePosition position) {
+    int any = 0;
+    for (int j = 0; j < NUM_DEAL_COLORS; ++j) {
+        if (position.floor[j]) {
+            any = 1;
             break;
         }
     }
-    free(child);
-    return result;
+    if (!any) {
+        return 1;
+    }
+    if (!position.num_deals) {
+        return 0;
+    }
+    for (int i = 0; i < NUM_CHOICES; ++i) {
+        TablePosition child = table_position_apply_choice(position, CHOICES[i]);
+        if (child.num_deals != TABLE_POSITION_INVALID && can_clear(child)) {
+            return 1;
+        }
+    }
+    return 0;
 }
 
 keys_t deals_key(const content_t *deals, int num_deals) {

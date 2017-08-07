@@ -22,16 +22,13 @@ int append_children(FullDict *dict, TablePosition position, int clears_only) {
     if (full_dict_contains(dict, &position)) {
         return 0;
     }
+    if (clears_only && !can_clear(position)) {
+        return 0;
+    }
     full_dict_append(dict, &position);
     for (int i = 0; i < NUM_CHOICES; ++i) {
-        TablePosition child;
-        memcpy(child.floor, position.floor, NUM_DEAL_COLORS * sizeof(puyos_t));
-        if (bottom_deal_and_choice(child.floor, position.deals[0], CHOICES[i])) {
-            resolve_bottom(child.floor, NUM_DEAL_COLORS, NULL);
-            for (int j = 1; j < position.num_deals; ++j) {
-                child.deals[j - 1] = position.deals[j];
-            }
-            child.num_deals = position.num_deals - 1;
+        TablePosition child = table_position_apply_choice(position, CHOICES[i]);
+        if (child.num_deals != TABLE_POSITION_INVALID) {
             append_children(dict, child, clears_only);
         }
     }
@@ -58,6 +55,13 @@ int main(int argc, char *argv[]) {
 
     FullDict *dict = full_dict_new(sizeof(TablePosition), compare_table_position);
     for (size_t j = 0; j < deals_dict->num_keys; ++j) {
+        if (argc > 2 && (j + 1) % 250 == 0) {
+            full_dict_finalize(dict);
+            printf("Saving a backup...\n");
+            FILE *f = fopen(argv[2], "w");
+            full_dict_write(dict, f);
+            fclose(f);
+        }
         printf("Handling deals %zu of %zu...", j, deals_dict->num_keys);
         TablePosition position;
         position.num_deals = num_deals;
@@ -72,6 +76,12 @@ int main(int argc, char *argv[]) {
         append_children(dict, position, clears_only);
     }
     full_dict_finalize(dict);
+    #ifdef OPENING_DEBUG
+        TablePosition *keys = dict->keys;
+        for (size_t i = 0; i < dict->num_keys; ++i) {
+            print_table_position(keys[i]);
+        }
+    #endif
     printf("Number of unique positions = %zu\n", dict->num_keys);
     if (argc > 2) {
         printf("Saving the result...\n");
@@ -91,4 +101,5 @@ int main(int argc, char *argv[]) {
 // 5: Number of unique positions = 10944303
 
 // Clears
-// 6: Number of unique positions = 5072076
+// 5: Number of unique positions = 20683
+// 6: Number of unique positions = 440669
