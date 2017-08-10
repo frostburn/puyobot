@@ -1,6 +1,8 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <omp.h>
+#include <unistd.h>
 
 #include "full-dict/full.h"
 
@@ -16,16 +18,21 @@ int append_children(FullDict *dict, TablePosition position, int clears_only) {
         return 0;
     }
     canonize_table_position(&position);
+    #pragma omp critical(dataupdate)
     if (dict->num_sorted + 2200 < dict->num_keys) {
         full_dict_finalize(dict);
     }
+    // This is probably not thread-safe but yolo
     if (full_dict_contains(dict, &position)) {
         return 0;
     }
     if (clears_only && !can_clear(position)) {
         return 0;
     }
-    full_dict_append(dict, &position);
+    #pragma omp critical(dataupdate)
+    {
+        full_dict_append(dict, &position);
+    }
     for (int i = 0; i < NUM_CHOICES; ++i) {
         TablePosition child = table_position_apply_choice(position, CHOICES[i]);
         if (child.num_deals != TABLE_POSITION_INVALID) {
@@ -53,13 +60,27 @@ int main(int argc, char *argv[]) {
     full_dict_associate(deals_dict, compare_keys, buffer);
     keys_t *unique_deals = deals_dict->keys;
 
-    FullDict *dict = full_dict_new(sizeof(TablePosition), compare_table_position);
+    FullDict *seen_dict = full_dict_new(sizeof(TablePosition), compare_keys);
+    FullDict *dict;
+    if (argc > 2 && access(argv[2], F_OK) != -1) {
+        printf("Old file found. Loading...\n");
+        FILE *f = fopen(argv[2], "r");
+        dict = full_dict_read(f, compare_table_position);
+        fclose(f);
+    } else {
+        dict = full_dict_new(sizeof(TablePosition), compare_table_position);
+    }
+    #pragma omp parallel for
     for (size_t j = 0; j < deals_dict->num_keys; ++j) {
+        #pragma omp critical(dataupdate)
         if (argc > 2 && (j + 1) % 250 == 0) {
             full_dict_finalize(dict);
             printf("Saving a backup...\n");
             FILE *f = fopen(argv[2], "w");
             full_dict_write(dict, f);
+            fclose(f);
+            f = fopen("seen.dump", "w");
+            full_dict_write(seen_dict, f);
             fclose(f);
         }
         printf("Handling deals %zu of %zu...", j, deals_dict->num_keys);
@@ -74,6 +95,7 @@ int main(int argc, char *argv[]) {
             printf("\n");
         }
         append_children(dict, position, clears_only);
+        full_dict_append(seen_dict, unique_deals + j);
     }
     full_dict_finalize(dict);
     #ifdef OPENING_DEBUG
