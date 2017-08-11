@@ -11,11 +11,20 @@ void print_table_position(TablePosition position) {
     assert(position.num_deals <= MAX_TABLE_DEALS);
     if (position.num_deals > 0) {
         print_deals(position.deals, position.num_deals);
-    } else if (position.num_deals) {
+    } else if (position.num_deals == 0) {
         printf("(terminal)\n");
     } else {
         printf("(invalid)\n");
     }
+}
+
+int table_position_empty(TablePosition position) {
+    for (int i = 0; i < NUM_DEAL_COLORS; ++i) {
+        if (position.floor[i]) {
+            return 0;
+        }
+    }
+    return 1;
 }
 
 int has_clear_potential(TablePosition position) {
@@ -78,6 +87,21 @@ int can_clear(TablePosition position) {
         }
     }
     return 0;
+}
+
+int can_clear_with_any(TablePosition position, int num_extra) {
+    assert(!position.num_deals);
+    int missing = 0;
+    for (int i = 0; i < NUM_DEAL_COLORS; ++i) {
+        int count = popcount(position.floor[i]);
+        if (count && count < CLEAR_THRESHOLD) {
+            missing += CLEAR_THRESHOLD - count;
+        }
+    }
+    if (missing > 2 * num_extra) {
+        return 0;
+    }
+    return 1;
 }
 
 keys_t deals_key(const content_t *deals, int num_deals) {
@@ -152,7 +176,9 @@ keys_t flip_deals(content_t *deals, int num_deals, int index) {
 
 unsigned int canonize_deals(content_t *deals, int num_deals) {
     assert(NUM_DEAL_COLORS == 4);
-    assert(num_deals > 0);
+    if (!num_deals) {
+        return (1 << 24) - 1;
+    }
 
     content_t *perm_deals = malloc(num_deals * sizeof(content_t));
     // Known symmetry reduction

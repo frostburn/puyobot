@@ -20,9 +20,13 @@ void print_table_position(TablePosition position);
 
 TablePosition table_position_apply_choice(TablePosition position, content_t choice);
 
+int table_position_empty(TablePosition position);
+
 int has_clear_potential(TablePosition position);
 
 int can_clear(TablePosition position);
+
+int can_clear_with_any(TablePosition position, int num_extra);
 
 keys_t deals_key(const content_t *deals, int num_deals);
 
