@@ -163,7 +163,11 @@ int main(int argc, char *argv[]) {
     FullDict *leaf_dict = full_dict_new(sizeof(TablePosition), compare_table_position);
     for (size_t i = 0; i < root_dict->num_keys; ++i) {
         print_table_position(roots[i]);
+        printf("%zu / %zu\n", i, root_dict->num_keys);
         collect_leaves(leaf_dict, roots[i]);
+        if (i % 100 == 0) {
+            full_dict_finalize(leaf_dict);
+        }
     }
     full_dict_finalize(leaf_dict);
     printf("%zu leaves collected\n", leaf_dict->num_keys);
@@ -189,10 +193,7 @@ int main(int argc, char *argv[]) {
     printf("%zu out of %zu positions have a chance of clearing\n", num_chances, root_dict->num_keys);
     if (argc > 4) {
         printf("Saving the result...\n");
-        FILE *f = fopen(argv[4], "w");
-        full_dict_write(root_dict, f);
-        fwrite(chances, sizeof(double), root_dict->num_keys, f);
-        fclose(f);
+        write_clears(root_dict, chances, argv[4]);
     }
 
     full_dict_delete(root_dict);
