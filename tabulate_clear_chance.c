@@ -109,21 +109,28 @@ void collect_leaves(FullDict *dict, TablePosition position) {
     }
 }
 
-void collect_roots(FullDict *dict, keys_t *deals_keys, size_t num_keys, int num_deals) {
+void collect_roots(FullDict *dict, TablePosition position, int remaining) {
+    if (!remaining) {
+        canonize_table_position(&position);
+        full_dict_append(dict, &position);
+    }
+    for (int i = 0; i < NUM_CHOICES; ++i) {
+        TablePosition child = table_position_apply_choice(position, CHOICES[i]);
+        if (child.num_deals == TABLE_POSITION_INVALID) {
+            continue;
+        }
+        collect_roots(dict, child, remaining - 1);
+    }
+}
+
+void collect_from_deals(FullDict *dict, keys_t *deals_keys, size_t num_keys, int num_deals, int depth) {
     for (size_t j = 0; j < num_keys; ++j) {
         TablePosition position;
         position.num_deals = num_deals;
         deals_from_key(position.deals, position.num_deals, deals_keys[j]);
         memset(position.floor, 0, NUM_DEAL_COLORS * sizeof(puyos_t));
         printf("Collecting %zu / %zu\n", j, num_keys);
-        for (int i = 0; i < NUM_CHOICES; ++i) {
-            TablePosition child = table_position_apply_choice(position, CHOICES[i]);
-            if (child.num_deals == TABLE_POSITION_INVALID) {
-                continue;
-            }
-            canonize_table_position(&child);
-            full_dict_append(dict, &child);
-        }
+        collect_roots(dict, position, depth);
     }
     full_dict_finalize(dict);
 }
@@ -134,7 +141,10 @@ int main(int argc, char *argv[]) {
         return 0;
     }
     if (argc  < 3) {
-        printf("Please give the depth of the search\n");
+        printf("Please give the root depth of the search\n");
+    }
+    if (argc < 4) {
+        printf("Please give the leaf depth of the serach\n");
     }
     FullDict *deals_dict = malloc(sizeof(FullDict));
     char *buffer = file_to_buffer(argv[1]);
@@ -143,10 +153,11 @@ int main(int argc, char *argv[]) {
     buffer += sizeof(int);
     full_dict_associate(deals_dict, compare_keys, buffer);
 
-    int depth = atoi(argv[2]);
+    int root_depth = atoi(argv[2]);
+    int leaf_depth = atoi(argv[3]);
 
     FullDict *root_dict = full_dict_new(sizeof(TablePosition), compare_table_position);
-    collect_roots(root_dict, deals_dict->keys, deals_dict->num_keys, num_deals);
+    collect_from_deals(root_dict, deals_dict->keys, deals_dict->num_keys, num_deals, root_depth);
     printf("%zu roots collected\n", root_dict->num_keys);
     TablePosition *roots = root_dict->keys;
     FullDict *leaf_dict = full_dict_new(sizeof(TablePosition), compare_table_position);
@@ -160,10 +171,10 @@ int main(int argc, char *argv[]) {
     double *leaf_chances = malloc(sizeof(double) * leaf_dict->num_keys);
     #pragma omp parallel for
     for (size_t i = 0; i < leaf_dict->num_keys; ++i) {
-        if (i % 1000 == 0) {
+        if (i % 10 == 0) {
             printf("caching leaf %zu / %zu\n", i, leaf_dict->num_keys);
         }
-        leaf_chances[i] = clear_chance(leaves[i], depth);
+        leaf_chances[i] = clear_chance(leaves[i], leaf_depth);
     }
     size_t num_chances = 0;
     double *chances = malloc(sizeof(double) * root_dict->num_keys);
@@ -176,9 +187,9 @@ int main(int argc, char *argv[]) {
         }
     }
     printf("%zu out of %zu positions have a chance of clearing\n", num_chances, root_dict->num_keys);
-    if (argc > 3) {
+    if (argc > 4) {
         printf("Saving the result...\n");
-        FILE *f = fopen(argv[3], "w");
+        FILE *f = fopen(argv[4], "w");
         full_dict_write(root_dict, f);
         fwrite(chances, sizeof(double), root_dict->num_keys, f);
         fclose(f);
