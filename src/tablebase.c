@@ -289,3 +289,43 @@ unsigned int canonize_table_position(TablePosition *position) {
     memcpy(position->floor, smallest, NUM_DEAL_COLORS * sizeof(puyos_t));
     return valid_permutations;
 }
+
+unsigned int tablebase_recommend(FullDict *dict, double *values, TablePosition position) {
+    double best = 0;
+    unsigned valid_choices = 0;
+    for (int i = 0; i < NUM_CHOICES; ++i) {
+        TablePosition child = table_position_apply_choice(position, CHOICES[i]);
+        if (child.num_deals == TABLE_POSITION_INVALID) {
+            continue;
+        }
+        canonize_table_position(&child);
+        if (!full_dict_contains(dict, &child)) {
+            continue;
+        }
+        double value = values[full_dict_index(dict, &child)];
+        if (value > best) {
+            best = value;
+            valid_choices = 1 << i;
+        } else if (value == best) {
+            valid_choices |= 1 << i;
+        }
+    }
+    return valid_choices;
+}
+
+void write_clears(FullDict *dict, double *values, char *filename) {
+    FILE *f = fopen(filename, "w");
+    full_dict_write(dict, f);
+    fwrite(values, sizeof(double), dict->num_keys, f);
+    fclose(f);
+}
+
+FullDict* read_clears(double **values_ptr, char *filename) {
+    FILE *f = fopen(filename, "r");
+    FullDict *dict = full_dict_read(f, compare_table_position);
+    double *values = malloc(sizeof(double) * dict->num_keys);
+    fread(values, sizeof(double), dict->num_keys, f);
+    fclose(f);
+    *values_ptr = values;
+    return dict;
+}

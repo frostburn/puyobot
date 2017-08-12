@@ -2,6 +2,7 @@
 #define PUYOBOT_TABLEBASE_H_GUARD
 
 #include "full-dict/types.h"
+#include "full-dict/full.h"
 
 #include "puyobot/bitboard.h"
 #include "puyobot/deal.h"
@@ -39,5 +40,11 @@ int compare_bottom(const void *a, const void *b);
 int compare_table_position(const void *a, const void *b);
 
 unsigned int canonize_table_position(TablePosition *position);
+
+unsigned int tablebase_recommend(FullDict *dict, double *values, TablePosition position);
+
+void write_clears(FullDict *dict, double *values, char *filename);
+
+FullDict* read_clears(double **values_ptr, char *filename);
 
 #endif

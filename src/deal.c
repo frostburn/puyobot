@@ -65,3 +65,37 @@ void print_deals(content_t *deals, int num_deals) {
     }
     printf("\x1b[0m\n");
 }
+
+void print_choice(content_t choice) {
+    content_t orientation = choice & ~CHOICE_X_MASK;
+    content_t color1_x = choice & CHOICE_X_MASK;
+    content_t color2_x = color1_x;
+    content_t color1_y = 0;
+    content_t color2_y = 1;
+    if (orientation == CHOICE_90) {
+        color2_x++;
+        color2_y--;
+    } else if (orientation == CHOICE_180) {
+        color1_y++;
+        color2_y--;
+    } else if (orientation == CHOICE_270) {
+        color1_x++;
+        color2_y--;
+    }
+    for (int i = 0; i < WIDTH; ++i) {
+        printf(" %c", 'A' + i);
+    }
+    printf("\n");
+    for (int y = 0; y < 2; ++y) {
+        for (int x = 0; x < WIDTH; ++x) {
+            if (color1_x == x && color1_y == y) {
+                printf(" a");
+            } else if (color2_x == x && color2_y == y) {
+                printf(" b");
+            } else {
+                printf("  ");
+            }
+        }
+        printf("\n");
+    }
+}
