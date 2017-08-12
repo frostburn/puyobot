@@ -62,3 +62,19 @@ void shuffle(void *array, size_t n, size_t element_size) {
     }
     free(temp);
 }
+
+int bitset_rand_index(unsigned int bitset) {
+    if (!bitset) {
+        return -1;
+    }
+    int n = jrand() % __builtin_popcount(bitset);
+    int i;
+    for (i = 0;; ++i) {
+        if (bitset & (1 << i)) {
+            if (n-- == 0) {
+                return i;
+            }
+        }
+    }
+    return i;
+}

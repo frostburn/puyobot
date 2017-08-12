@@ -1,5 +1,6 @@
 #include "jkiss/jkiss.h"
 
+#include "puyobot/util.h"
 #include "puyobot/deal.h"
 
 const content_t ROTATIONS[4] = {
@@ -51,11 +52,7 @@ content_t rand_choice(choice_set_t choice_set) {
     if (!choice_set) {
         return CHOICE_PASS;
     }
-    int i = jrand() % NUM_CHOICES;
-    while (!(choice_set & (1 << i))) {
-        i = (i + 1) % NUM_CHOICES;
-    }
-    return CHOICES[i];
+    return CHOICES[bitset_rand_index(choice_set)];
 }
 
 void print_deals(content_t *deals, int num_deals) {
