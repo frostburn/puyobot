@@ -3,6 +3,7 @@ ADD_LIBRARY(
   bitboard.c
   bottom.c
   deal.c
+  state.c
   tablebase.c
   util.c
 )
