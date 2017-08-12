@@ -1,7 +1,12 @@
-#include "animate.c"
+#include <stdlib.h>
+#include <stdio.h>
+
+#include "puyobot/animate.h"
+#include "puyobot/solver/policy.h"
+
 #define NUM_DEALS (3)
 
-void print_deals(content_t *deals, int num_deals) {
+void print_deals_on_the_side(content_t *deals, int num_deals) {
     printf("                   \033[A\033[A\033[A");
     for (int i = 0; i < num_deals; ++i) {
         content_t color1 = deal_color1(deals[i]);
@@ -13,7 +18,7 @@ void print_deals(content_t *deals, int num_deals) {
     printf("\x1b[0m\033[B\033[B\n");
 }
 
-void policy_demo(state *s, int do_animation, size_t iterations, policy_fun policy) {
+void policy_demo(State *s, int do_animation, size_t iterations, policy_fun policy) {
     content_t deals[NUM_DEALS];
     int total_score = 0;
     double puyos_played = 0;
@@ -23,9 +28,9 @@ void policy_demo(state *s, int do_animation, size_t iterations, policy_fun polic
     if (do_animation >= 0) {
         print_state(s);
     }
-    void cb(state *s) {
+    void cb(State *s) {
         redraw_state(s);
-        print_deals(deals + 1, 2);
+        print_deals_on_the_side(deals + 1, 2);
         float efficiency = 0;
         if (puyos_played) {
             efficiency = total_score / puyos_played;
@@ -37,13 +42,13 @@ void policy_demo(state *s, int do_animation, size_t iterations, policy_fun polic
         deals[i] = rand_piece();
     }
 
-    for (int i = 0; i < iterations; ++i) {
+    for (size_t i = 0; i < iterations; ++i) {
         content_t choice = policy(s, deals, NUM_DEALS);
         if (!apply_deal_and_choice(s, deals[0], choice)) {
             game_overs++;
             clear_state(s);
         }
-        state *c = copy_state(s);
+        State *c = copy_state(s);
         if (do_animation == 1) {
             animate(c, cb);
         } else if (do_animation == 0) {
@@ -67,15 +72,16 @@ void policy_demo(state *s, int do_animation, size_t iterations, policy_fun polic
 
 void eval_demo(int do_animation, size_t iterations, eval_fun eval, float tree_factor) {
     content_t policy(void *s, content_t *deals, int num_deals) {
-        tree_options options = simple_tree_options(eval, 0, tree_factor);
+        SearchOptions options = simple_search_options(eval, 0, tree_factor);
         return solve(s, deals, num_deals, options);
     }
-    state *s = calloc(1, sizeof(state));
+    State *s = calloc(1, sizeof(State));
     policy_demo(s, do_animation, iterations, policy);
 }
 
+/*
 size_t show_chain(int min_links, int use_extensions, int use_tailing) {
-    state *s = calloc(1, sizeof(state));
+    State *s = calloc(1, sizeof(State));
     size_t iter = 0;
     int chain;
     while (1) {
@@ -101,4 +107,14 @@ size_t show_chain(int min_links, int use_extensions, int use_tailing) {
     print_state(s);
     animate(s, redraw_state);
     return iter;
+}
+*/
+
+int main() {
+    jkiss_init();
+
+    State *state = calloc(1, sizeof(State));
+    policy_demo(state, 1, 100, group_chain_policy);
+
+    return 0;
 }
