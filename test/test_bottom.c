@@ -7,7 +7,7 @@
 void playout() {
     puyos_t floor[NUM_DEAL_COLORS] = {0};
     for (int i = 0; i < 30; ++i) {
-        bottom_deal_and_choice(floor, rand_piece(), rand_choice(0, WIDTH));
+        bottom_deal_and_choice(floor, rand_piece(), rand_choice(CHOICE_SET_ALL));
         resolve_bottom(floor, NUM_DEAL_COLORS, NULL);
         print_bottom(floor, NUM_DEAL_COLORS);
     }

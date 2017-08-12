@@ -13,8 +13,10 @@
 #define COLOR1_MASK (15)
 #define COLOR2_SHIFT (4)
 #define DEATH_SCORE (1e13)
+#define CHOICE_SET_ALL ((1 << NUM_CHOICES) - 1)
 
 typedef unsigned char content_t;
+typedef unsigned int choice_set_t;
 
 extern const content_t ROTATIONS[];
 extern const content_t CHOICES[];
@@ -29,10 +31,12 @@ content_t deal_color2(content_t deal);
 
 content_t make_choice(int *x, int *orientation);
 
-content_t rand_choice(content_t min_x, content_t max_x);
+content_t rand_choice(choice_set_t choice_set);
 
 void print_deals(content_t *deals, int num_deals);
 
 void print_choice(content_t choice);
+
+void print_choice_set(choice_set_t choice_set);
 
 #endif

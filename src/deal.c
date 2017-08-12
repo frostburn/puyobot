@@ -47,12 +47,15 @@ content_t make_choice(int *x, int *orientation) {
     return *x | rotation;
 }
 
-content_t rand_choice(content_t min_x, content_t max_x) {
-    content_t rotation = ROTATIONS[jrand() % 4];
-    if (max_x == 5 && (rotation == CHOICE_90 || rotation == CHOICE_270)) {
-        max_x = 4;
+content_t rand_choice(choice_set_t choice_set) {
+    if (!choice_set) {
+        return CHOICE_PASS;
     }
-    return (min_x + (jrand() % (1 + max_x - min_x))) | rotation;
+    int i = jrand() % NUM_CHOICES;
+    while (!(choice_set & (1 << i))) {
+        i = (i + 1) % NUM_CHOICES;
+    }
+    return CHOICES[i];
 }
 
 void print_deals(content_t *deals, int num_deals) {
@@ -95,6 +98,22 @@ void print_choice(content_t choice) {
             } else {
                 printf("  ");
             }
+        }
+        printf("\n");
+    }
+}
+
+void print_choice_set(choice_set_t choice_set) {
+    int k = 0;
+    for (int j = 0; j < 4; ++j) {
+        printf("%d degrees:", j * 90);
+        for (int i = 0; i < WIDTH - (j % 2); ++i) {
+            if (choice_set & (1 << k)) {
+                printf(" @");
+            } else {
+                printf(" .");
+            }
+            ++k;
         }
         printf("\n");
     }

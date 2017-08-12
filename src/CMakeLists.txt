@@ -1,5 +1,7 @@
 ADD_LIBRARY(
   puyobot
+  solver/eval.c
+  solver/search.c
   bitboard.c
   bottom.c
   deal.c

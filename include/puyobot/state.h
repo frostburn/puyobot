@@ -4,6 +4,7 @@
 #include "puyobot/constants.h"
 #include "puyobot/bitboard.h"
 #include "puyobot/deal.h"
+#include "puyobot/solver/search.h"
 
 #define NUM_COLORS (6)
 #define RED (0)
@@ -18,12 +19,9 @@
 #define NUM_CHAIN_POWERS (24)
 #define MAX_CLEAR_BONUS (999)
 
-static int COLOR_BONUS[NUM_COLORS] = {0, 0, 3, 6, 12, 24};
-static int GROUP_BONUS[NUM_GROUP_BONUS] = {0, 2, 3, 4, 5, 6, 7, 10};
-static int CHAIN_POWERS[NUM_CHAIN_POWERS] = {
-    0, 8, 16, 32, 64, 96, 128, 160, 192, 224, 256, 288,
-    320, 352, 384, 416, 448, 480, 512, 544, 576, 608, 640, 672
-};
+extern const int COLOR_BONUS[];
+extern const int GROUP_BONUS[];
+extern const int CHAIN_POWERS[];
 
 typedef struct State
 {
@@ -61,5 +59,13 @@ int state_is_full(State *state);
 void assert_sanity(State *state);
 
 void blast_state(State *state, int num_shots);
+
+int apply_deal_and_choice(State *state, content_t deal, content_t choice);
+
+void clear_deal_and_choice(State *state);
+
+int step_state(void *s, content_t deal, content_t choice, double *score);
+
+SearchOptions simple_search_options(eval_fun eval, int depth, double tree_factor);
 
 #endif

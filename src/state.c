@@ -3,7 +3,16 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "jkiss/jkiss.h"
+
 #include "puyobot/state.h"
+
+const int COLOR_BONUS[NUM_COLORS] = {0, 0, 3, 6, 12, 24};
+const int GROUP_BONUS[NUM_GROUP_BONUS] = {0, 2, 3, 4, 5, 6, 7, 10};
+const int CHAIN_POWERS[NUM_CHAIN_POWERS] = {
+    0, 8, 16, 32, 64, 96, 128, 160, 192, 224, 256, 288,
+    320, 352, 384, 416, 448, 480, 512, 544, 576, 608, 640, 672
+};
 
 State* copy_state(State *state) {
     State *copy = malloc(sizeof(State));
@@ -333,4 +342,75 @@ void blast_state(State *state, int num_shots) {
             num_shots--;
         }
     }
+}
+
+int apply_deal_and_choice(State *state, content_t deal, content_t choice) {
+    if (choice == CHOICE_PASS) {
+        return 0;
+    }
+    content_t color1 = deal & COLOR1_MASK;
+    content_t color2 = deal >> COLOR2_SHIFT;
+    content_t orientation = choice & ~CHOICE_X_MASK;
+    content_t color1_x = choice & CHOICE_X_MASK;
+    content_t color2_x = color1_x;
+    content_t color1_y = 0;
+    content_t color2_y = 1;
+    if (orientation == CHOICE_90) {
+        color2_x++;
+        color2_y--;
+    } else if (orientation == CHOICE_180) {
+        color1_y++;
+        color2_y--;
+    } else if (orientation == CHOICE_270) {
+        color1_x++;
+        color2_y--;
+    }
+    puyos_t all = 0;
+    for (int i = 0; i < NUM_COLORS; ++i) {
+        all |= state->floors[0][i];
+    }
+
+    if (
+        ((1ULL << (color1_x + V_SHIFT * GHOST_Y)) & all) &&
+        ((1ULL << (color2_x + V_SHIFT * GHOST_Y)) & all)
+    ) {
+        return 0;
+    }
+
+    puyos_t puyo1 = 1ULL << (color1_x + V_SHIFT * color1_y);
+    state->floors[0][color1] |= puyo1;
+    puyos_t puyo2 = 1ULL << (color2_x + V_SHIFT * color2_y);
+    state->floors[0][color2] |= puyo2;
+
+    return 1;
+}
+
+void clear_deal_and_choice(State *state) {
+    for (int i = 0; i < NUM_COLORS; ++i) {
+        state->floors[0][i] &= ~(TOP | (TOP << V_SHIFT));
+    }
+}
+
+int step_state(void *s, content_t deal, content_t choice, double *score) {
+    int valid = apply_deal_and_choice(s, deal, choice);
+    if (!valid) {
+        return 0;
+    }
+    *score = resolve(s, NULL);
+    return 1;
+}
+
+void *_copy_state(void *s) {
+    return copy_state(s);
+}
+
+SearchOptions simple_search_options(eval_fun eval, int depth, double tree_factor) {
+    return (SearchOptions) {
+        .copy = _copy_state,
+        .delete = free,
+        .step = step_state,
+        .eval = eval,
+        .depth = depth,
+        .tree_factor = tree_factor,
+    };
 }

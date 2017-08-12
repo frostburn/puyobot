@@ -1,6 +1,11 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 2.8.7)
 PROJECT(puyobot C)
 
+find_package(OpenMP)
+if (OPENMP_FOUND)
+    set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
+endif()
+
 SET(EXECUTABLE_OUTPUT_PATH "${CMAKE_BINARY_DIR}/bin")
 SET(LIBRARY_OUTPUT_PATH "${CMAKE_BINARY_DIR}/lib")
 
@@ -24,16 +29,13 @@ ADD_EXECUTABLE(tabulate_openings tabulate_openings.c)
 TARGET_LINK_LIBRARIES(tabulate_openings puyobot jkiss fulldict)
 ADD_EXECUTABLE(tabulate_clear_chance tabulate_clear_chance.c)
 TARGET_LINK_LIBRARIES(tabulate_clear_chance puyobot jkiss fulldict)
+ADD_EXECUTABLE(merge_clears merge_clears.c)
+TARGET_LINK_LIBRARIES(merge_clears puyobot jkiss fulldict)
 
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
 endif()
 
-set(CMAKE_C_FLAGS "-Wall -Wextra")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra")
 set(CMAKE_C_FLAGS_DEBUG "-g")
 set(CMAKE_C_FLAGS_RELEASE "-O3")
-
-find_package(OpenMP)
-if (OPENMP_FOUND)
-    set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
-endif()
