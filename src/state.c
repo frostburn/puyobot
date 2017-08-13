@@ -412,5 +412,6 @@ SearchOptions simple_search_options(eval_fun eval, int depth, double tree_factor
         .eval = eval,
         .depth = depth,
         .tree_factor = tree_factor,
+        .choice_sets = NULL,
     };
 }

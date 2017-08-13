@@ -49,7 +49,7 @@ void policy_demo(State *s, int do_animation, size_t iterations, policy_fun polic
             clear_state(s);
         }
         State *c = copy_state(s);
-        if (do_animation == 1) {
+        if (do_animation >= 1) {
             animate(c, cb);
         } else if (do_animation == 0) {
             cb(c);
@@ -66,14 +66,22 @@ void policy_demo(State *s, int do_animation, size_t iterations, policy_fun polic
             deals[j] = deals[j + 1];
         }
         deals[NUM_DEALS - 1] = rand_piece();
+        if (do_animation >= 2) {
+            c = copy_state(s);
+            apply_deal_and_choice(c, deals[0], 2 | CHOICE_0);
+            cb(c);
+            free(c);
+            printf("\033[A");
+            getchar();
+        }
     }
     printf("\nDone\n");
 }
 
-void eval_demo(int do_animation, size_t iterations, eval_fun eval, float tree_factor) {
+void eval_demo(int do_animation, size_t iterations, eval_fun eval, int depth, float tree_factor) {
     content_t policy(void *s, content_t *deals, int num_deals) {
-        SearchOptions options = simple_search_options(eval, 0, tree_factor);
-        return solve(s, deals, num_deals, options);
+        SearchOptions options = simple_search_options(eval, depth, tree_factor);
+        return rand_choice(solve(s, deals, num_deals, options));
     }
     State *s = calloc(1, sizeof(State));
     policy_demo(s, do_animation, iterations, policy);

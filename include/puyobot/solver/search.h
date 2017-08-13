@@ -16,6 +16,7 @@ typedef struct SearchOptions
     eval_fun eval;
     int depth;
     double tree_factor;
+    choice_set_t *choice_sets;
 } SearchOptions;
 
 double solve_indeterministic(void *state, SearchOptions options);

@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <stdlib.h>
 
 #include "puyobot/solver/policy.h"
@@ -24,6 +25,33 @@ content_t random_but_alive_policy(void *s, content_t *deals, int  num_deals) {
     }
     free(c);
     return CHOICE_PASS;
+}
+
+static choice_set_t FROG_CHOICES[3+1] = {
+    CHOICE_SET_FROG_LEFT,
+    CHOICE_SET_FROG_LEFT,
+    CHOICE_SET_FROG_LEFT,
+    CHOICE_SET_FROG_LEFT,
+};
+content_t frog_policy(void *s, content_t *deals, int num_deals) {
+    assert(num_deals == 3);
+    SearchOptions options = simple_search_options(eval_zero, 1, 1);
+    options.choice_sets = FROG_CHOICES;
+    return rand_choice(solve(s, deals, num_deals, options));
+}
+
+static choice_set_t HALF_DEEP_CHOICES[3+2] = {
+    CHOICE_SET_ALL,
+    CHOICE_SET_ALL,
+    CHOICE_SET_ALL,
+    CHOICE_SET_HALF,
+    CHOICE_SET_HALF,
+};
+content_t half_deep_policy(void *s, content_t *deals, int num_deals) {
+    assert(num_deals == 3);
+    SearchOptions options = simple_search_options(eval_zero, 2, 1);
+    options.choice_sets = HALF_DEEP_CHOICES;
+    return rand_choice(solve(s, deals, num_deals, options));
 }
 
 content_t group_policy(void *s, content_t *deals, int  num_deals) {
