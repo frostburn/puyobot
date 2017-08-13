@@ -7,6 +7,7 @@ ADD_LIBRARY(
   bitboard.c
   bottom.c
   deal.c
+  multiplayer.c
   state.c
   tablebase.c
   util.c
