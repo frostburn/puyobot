@@ -69,3 +69,46 @@ double eval_chains(void *_s) {
     free(c);
     return score;
 }
+
+
+// Technically we would need a void match in the middle, but that's taken care of by the clears.
+#define SANDWICH_LEFT ((1ULL << 1) | (1ULL << V_SHIFT) | (1ULL << (1 + 2 * V_SHIFT)))
+#define SANDWICH_RIGHT (1ULL | (1ULL << (1 + V_SHIFT)) | (1ULL << (2 * V_SHIFT)))
+
+#define SANDWICH_AURA ((1ULL << 1) | ((1ULL | (1ULL << 2) | (1ULL << (2 * V_SHIFT)) | (1ULL << (2 + 2 * V_SHIFT)) | (1ULL << (1 + 3 * V_SHIFT))) << V_SHIFT))
+double eval_sandwich(void *s) {
+    State *state = s;
+    double score = 0;
+    puyos_t sandwiched[2] = {0};
+    for (int k = 0; k < TOTAL_HEIGHT - 2; ++k) {
+        for (int i = 0; i < WIDTH - 1; ++i) {
+            puyos_t pattern_left[2] = {SANDWICH_LEFT, 0};
+            puyos_t pattern_right[2] = {SANDWICH_RIGHT, 0};
+            puyos_t pattern_aura[2] = {SANDWICH_AURA, 0};
+            translate_2(pattern_left, i, k);
+            translate_2(pattern_right, i, k);
+            translate_2(pattern_aura, i, k - 1);
+            for (int j = 0; j < NUM_COLORS - j; ++j) {
+                puyos_t puyos[2] = {state->floors[0][j], state->floors[1][j]};
+                puyos_t aura[2] = {puyos[0] & pattern_aura[0], puyos[1] & pattern_aura[1]};
+                if (popcount_2(aura) != 1) {
+                    continue;
+                }
+                puyos_t match[2];
+                match[0] = puyos[0] & pattern_left[0];
+                match[1] = puyos[1] & pattern_left[1];
+                if (match[0] == pattern_left[0] && match[1] == pattern_left[1]) {
+                    sandwiched[0] |= match[0] | aura[0];
+                    sandwiched[1] |= match[1] | aura[1];
+                }
+                match[0] = puyos[0] & pattern_right[0];
+                match[1] = puyos[1] & pattern_right[1];
+                if (match[0] == pattern_right[0] && match[1] == pattern_right[1]) {
+                    sandwiched[0] |= match[0] | aura[0];
+                    sandwiched[1] |= match[1] | aura[1];
+                }
+            }
+        }
+    }
+    return popcount_2(sandwiched);
+}
