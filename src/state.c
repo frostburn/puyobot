@@ -284,11 +284,14 @@ int resolve(State *state, int *chain_out) {
         }
         total_score += score;
     }
-    int all_clear_bonus = 8500;
-    for (int i = 0; i < NUM_COLORS; ++i) {
-        if (state->floors[NUM_FLOORS - 1][i]) {
-            all_clear_bonus = 0;
-            break;
+    int all_clear_bonus = 0;
+    if (total_score) {
+        all_clear_bonus = 8500;
+        for (int i = 0; i < NUM_COLORS; ++i) {
+            if (state->floors[NUM_FLOORS - 1][i]) {
+                all_clear_bonus = 0;
+                break;
+            }
         }
     }
     if (chain_out) {
