@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <string.h>
 
 #include "jkiss/jkiss.h"
 
@@ -63,9 +64,34 @@ void test_mirror() {
     }
 }
 
+void test_translate() {
+    puyos_t puyos[2] = {23498723498729384, 9829472398472934};
+    print_puyos_2(puyos);
+    puyos_t temp[2];
+    memcpy(temp, puyos, 2 * sizeof(puyos_t));
+    translate_2(temp, 1, 1);
+    print_puyos_2(temp);
+    right_2(puyos);
+    down_2(puyos);
+    assert(puyos[0] == temp[0]);
+    assert(puyos[1] == temp[1]);
+
+    puyos[0] = 23498723498729384;
+    puyos[1] = 9829472398472934;
+    memcpy(temp, puyos, 2 * sizeof(puyos_t));
+    translate_2(temp, -2, -1);
+    print_puyos_2(temp);
+    left_2(puyos);
+    left_2(puyos);
+    up_2(puyos);
+    assert(puyos[0] == temp[0]);
+    assert(puyos[1] == temp[1]);
+}
+
 int main() {
     test_euler();
     test_flood_2();
     test_mirror();
+    test_translate();
     return 0;
 }

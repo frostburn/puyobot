@@ -178,20 +178,62 @@ void beam_down_2(puyos_t *puyos) {
     puyos[1] |= puyos[1] << (8 * V_SHIFT);
 }
 
-// Positive direction only and no clips here. So be safe.
-void translate_2(puyos_t *puyos, int x, int y) {
-    if (y < HEIGHT) {
-        puyos[0] <<= x;
-        puyos[1] <<= x;
-        puyos[1] <<= y * V_SHIFT;
-        puyos[1] |= puyos[0] >> (V_SHIFT * (HEIGHT - y));
-        puyos[0] <<= y * V_SHIFT;
-    } else {
-        puyos[1] = puyos[0] << (x + V_SHIFT * (y - HEIGHT));
+puyos_t TRANSLATE_X_MASKS[WIDTH] = {
+    FULL,
+    LEFT_WALL | (LEFT_WALL << 1) | (LEFT_WALL << 2) | (LEFT_WALL << 3) | (LEFT_WALL << 4),
+    LEFT_WALL | (LEFT_WALL << 1) | (LEFT_WALL << 2) | (LEFT_WALL << 3),
+    LEFT_WALL | (LEFT_WALL << 1) | (LEFT_WALL << 2),
+    LEFT_WALL | (LEFT_WALL << 1),
+    LEFT_WALL,
+};
+
+void translate_x_2(puyos_t *puyos, int x) {
+    if (x >= WIDTH || x <= -WIDTH) {
         puyos[0] = 0;
+        puyos[1] = 0;
+    }
+    if (x > 0) {
+        puyos[0] = (puyos[0] & TRANSLATE_X_MASKS[x]) << x;
+        puyos[1] = (puyos[1] & TRANSLATE_X_MASKS[x]) << x;
+    } else if (x < 0) {
+        x = -x;
+        puyos[0] = (puyos[0] >> x) & TRANSLATE_X_MASKS[x];
+        puyos[1] = (puyos[1] >> x) & TRANSLATE_X_MASKS[x];
+    }
+}
+
+void translate_y_2(puyos_t *puyos, int y) {
+    if (y >= TOTAL_HEIGHT || y <= -TOTAL_HEIGHT) {
+        puyos[0] = 0;
+        puyos[1] = 0;
+    }
+    if (y > 0) {
+        if (y < HEIGHT) {
+            puyos[1] <<= y * V_SHIFT;
+            puyos[1] |= puyos[0] >> (V_SHIFT * (HEIGHT - y));
+            puyos[0] <<= y * V_SHIFT;
+        } else {
+            puyos[1] = puyos[0] << (V_SHIFT * (y - HEIGHT));
+            puyos[0] = 0;
+        }
+    } else if (y < 0) {
+        y = -y;
+        if (y < HEIGHT) {
+            puyos[0] >>= y * V_SHIFT;
+            puyos[0] |= puyos[1] << (V_SHIFT * (HEIGHT - y));
+            puyos[1] >>= y * V_SHIFT;
+        } else {
+            puyos[0] = puyos[1] >> (V_SHIFT * (y - HEIGHT));
+            puyos[1] = 0;
+        }
     }
     puyos[0] &= FULL;
     puyos[1] &= FULL;
+}
+
+void translate_2(puyos_t *puyos, int x, int y) {
+    translate_x_2(puyos, x);
+    translate_y_2(puyos, y);
 }
 
 void point_2(puyos_t *puyos, int x, int y) {
