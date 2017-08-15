@@ -1,8 +1,9 @@
 #include <assert.h>
+#include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "puyobot/solver/policy.h"
-#include "puyobot/state.h"
 
 content_t random_policy(void *s, content_t *deals, int  num_deals) {
     return CHOICES[jrand() % NUM_CHOICES];
@@ -76,4 +77,39 @@ content_t group_chain_policy(void *s, content_t *deals, int  num_deals) {
     }
     SearchOptions options = simple_search_options(_eval_groups_chains, 0, factor);
     return rand_choice(solve(s, deals, num_deals, options));
+}
+
+choice_set_t filter_chains(State *state, content_t deal, int max_chain) {
+    choice_set_t valid = 0;
+    State *copy = malloc(sizeof(State));
+    for (int i = 0; i < NUM_CHOICES; ++i) {
+        memcpy(copy, state, sizeof(State));
+        if (!apply_deal_and_choice(copy, deal, CHOICES[i])) {
+            continue;
+        }
+        int chain = 0;
+        resolve(copy, &chain);
+        if (chain <= max_chain) {
+            valid |= 1 << i;
+        }
+    }
+    free(copy);
+    return valid;
+}
+
+content_t chainless_policy(void *s, content_t *deals, int num_deals) {
+    SearchOptions options = simple_search_options(eval_zero, 1, 1);
+    options.choice_sets = malloc((num_deals + 1) * sizeof(choice_set_t));
+    for (int i = 0; i < num_deals + 1; ++i) {
+        options.choice_sets[i] = CHOICE_SET_ALL;
+    }
+    if (state_popcount(s) + 16 < TOTAL_SPACE) {
+        options.choice_sets[0] = filter_chains(s, deals[0], 0);
+        if (!options.choice_sets[0]) {
+            options.choice_sets[0] = CHOICE_SET_ALL;
+        }
+    }
+    content_t choice = rand_choice(solve(s, deals, num_deals, options));
+    free(options.choice_sets);
+    return choice;
 }
