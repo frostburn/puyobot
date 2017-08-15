@@ -26,4 +26,6 @@ content_t chainless_policy(void *s, content_t *deals, int num_deals);
 
 choice_set_t filter_chains(State *state, content_t deal, int max_chain);
 
+choice_set_t filter_landings(State *state);
+
 #endif

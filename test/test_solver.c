@@ -7,6 +7,43 @@
 #include "puyobot/solver/search.h"
 #include "puyobot/solver/ranking.h"
 
+void test_ranking_add() {
+    RankingResult a = {0};
+    RankingResult b = {0};
+
+    a.num_deals = 1;
+    b.num_deals = 1;
+    a.iterations = 1;
+    b.iterations = 2;
+    a.chain_counts[0] = 3;
+    b.chain_counts[0] = 4;
+    a.chain_counts[1] = 5;
+
+    RankingResult c = add_ranking_result(a, b);
+    assert(c.num_deals == 1);
+    assert(c.iterations == 3);
+    assert(c.chain_counts[0] == 7);
+    assert(c.chain_counts[1] == 5);
+    assert(c.chain_counts[2] == 0);
+    assert(a.chain_counts[0] == 3);
+}
+
+void test_ranking_random() {
+    RankingResult result = rank_policy(100, 1, random_policy);
+    assert(result.puyos_played >= result.puyos_landed);
+}
+
+content_t random_but_lands_policy(void *s, content_t *deals, int num_deals) {
+    choice_set_t choice_set = filter_landings(s);
+    return rand_choice(choice_set);
+}
+
+void test_ranking_lands() {
+    RankingResult result = rank_policy(200, 1, random_but_lands_policy);
+    print_ranking_result(result, 1);
+    assert(result.puyos_played == result.puyos_played);
+}
+
 int main() {
     jkiss_init();
 
@@ -31,25 +68,7 @@ int main() {
         deals[num_deals - 1] = rand_piece();
     }
 
-    RankingResult a = {0};
-    RankingResult b = {0};
-
-    a.num_deals = 1;
-    b.num_deals = 1;
-    a.iterations = 1;
-    b.iterations = 2;
-    a.chain_counts[0] = 3;
-    b.chain_counts[0] = 4;
-    a.chain_counts[1] = 5;
-
-    RankingResult c = add_ranking_result(a, b);
-    assert(c.num_deals == 1);
-    assert(c.iterations == 3);
-    assert(c.chain_counts[0] == 7);
-    assert(c.chain_counts[1] == 5);
-    assert(c.chain_counts[2] == 0);
-    assert(a.chain_counts[0] == 3);
-
-    RankingResult result = rank_policy(100, 1, random_policy);
-    assert(result.puyos_played >= result.puyos_landed);
+    test_ranking_add();
+    test_ranking_random();
+    test_ranking_lands();
 }

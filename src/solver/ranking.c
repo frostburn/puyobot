@@ -80,12 +80,12 @@ RankingResult rank_policy(size_t iterations, size_t num_deals, policy_fun policy
         int chain = 0;
         puyos_t all[2];
         get_state_mask(state, all);
-        puyos_t puyos_being_played = all[0] & TOP;
+        puyos_t puyos_being_played = all[0] & (TOP | (TOP << V_SHIFT));
         if (puyos_being_played) {
             result.puyos_played += 2;
-            puyos_t death_line = (all[0] >> V_SHIFT) & DEATH_BLOCK;
+            puyos_t ghosts = all[0] & GHOST_LINE;
             // XXX: Landing rate calculation not exactly precise in the case of suicides.
-            if (beam_down(puyos_being_played) & death_line) {
+            if (beam_down(puyos_being_played) & ghosts) {
                 result.puyos_landed += 1;
             } else {
                 result.puyos_landed += 2;

@@ -97,6 +97,33 @@ choice_set_t filter_chains(State *state, content_t deal, int max_chain) {
     return valid;
 }
 
+#define GHOST_BANS_SLIM (1 | (1 << (2 * WIDTH - 1)))
+#define GHOST_BANS_FLAT ((1 << WIDTH) | (1 << (3 * WIDTH - 1)))
+
+choice_set_t filter_landings(State *state) {
+    puyos_t ghosts = 0;
+    for (int i = 0; i < NUM_COLORS; ++i) {
+        ghosts |= state->floors[0][i];
+    }
+    ghosts = beam_up(ghosts & GHOST_LINE);
+    if (!ghosts) {
+        return CHOICE_SET_ALL;
+    }
+    choice_set_t banned = 0;
+    for (int x = 0; x < WIDTH; ++x) {
+        if ((1ULL << x) & ghosts) {
+            banned |= GHOST_BANS_SLIM << x;
+            if (x < WIDTH - 1) {
+                banned |= GHOST_BANS_FLAT << x;
+            }
+            if (x > 0) {
+                banned |= GHOST_BANS_FLAT << (x - 1);
+            }
+        }
+    }
+    return CHOICE_SET_ALL & ~banned;
+}
+
 content_t chainless_policy(void *s, content_t *deals, int num_deals) {
     SearchOptions options = simple_search_options(eval_zero, 1, 1);
     options.choice_sets = malloc((num_deals + 1) * sizeof(choice_set_t));
