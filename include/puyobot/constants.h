@@ -15,4 +15,7 @@
 
 #define NUM_DEAL_COLORS (4)
 
+// MAX_CHAIN = (TOTAL_SPACE / CLEAR_THRESHOLD) rounded down.
+#define MAX_CHAIN (19)
+
 #endif

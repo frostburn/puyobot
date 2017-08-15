@@ -5,6 +5,7 @@
 
 #include "puyobot/state.h"
 #include "puyobot/solver/search.h"
+#include "puyobot/solver/ranking.h"
 
 int main() {
     jkiss_init();
@@ -29,4 +30,26 @@ int main() {
         }
         deals[num_deals - 1] = rand_piece();
     }
+
+    RankingResult a = {0};
+    RankingResult b = {0};
+
+    a.num_deals = 1;
+    b.num_deals = 1;
+    a.iterations = 1;
+    b.iterations = 2;
+    a.chain_counts[0] = 3;
+    b.chain_counts[0] = 4;
+    a.chain_counts[1] = 5;
+
+    RankingResult c = add_ranking_result(a, b);
+    assert(c.num_deals == 1);
+    assert(c.iterations == 3);
+    assert(c.chain_counts[0] == 7);
+    assert(c.chain_counts[1] == 5);
+    assert(c.chain_counts[2] == 0);
+    assert(a.chain_counts[0] == 3);
+
+    RankingResult result = rank_policy(100, 1, random_policy);
+    assert(result.puyos_played >= result.puyos_landed);
 }

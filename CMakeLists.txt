@@ -33,6 +33,8 @@ ADD_EXECUTABLE(merge_clears merge_clears.c)
 TARGET_LINK_LIBRARIES(merge_clears puyobot jkiss fulldict)
 ADD_EXECUTABLE(demo demo.c)
 TARGET_LINK_LIBRARIES(demo puyobot jkiss fulldict)
+ADD_EXECUTABLE(rank_policies rank_policies.c)
+TARGET_LINK_LIBRARIES(rank_policies puyobot jkiss fulldict)
 
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
