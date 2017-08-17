@@ -140,3 +140,31 @@ content_t chainless_policy(void *s, content_t *deals, int num_deals) {
     free(options.choice_sets);
     return choice;
 }
+
+double eval_gcs(void *s) {
+    double groups = eval_groups(s);
+    double chains = eval_chains(s);
+    double sandwich = eval_sandwich(s);
+    return 50 * groups + 800 * chains + 125 * sandwich;
+}
+
+content_t gcs_policy(void *s, content_t *deals, int num_deals) {
+    SearchOptions options = simple_search_options(eval_gcs, 0, 1);
+    options.choice_sets = malloc((num_deals + 1) * sizeof(choice_set_t));
+    for (int i = 0; i < num_deals + 1; ++i) {
+        options.choice_sets[i] = CHOICE_SET_ALL;
+    }
+    int count = state_popcount(s);
+    if (count < TOTAL_SPACE - 16) {
+        options.choice_sets[0] = filter_chains(s, deals[0], 0);
+    }
+    if (count > TOTAL_SPACE - 8) {
+        options.tree_factor = 4;
+    }
+    if (!options.choice_sets[0]) {
+        options.choice_sets[0] = CHOICE_SET_ALL;
+    }
+    content_t choice = rand_choice(solve(s, deals, num_deals, options));
+    free(options.choice_sets);
+    return choice;
+}
