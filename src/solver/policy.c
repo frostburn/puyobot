@@ -149,7 +149,11 @@ double eval_gcs(void *s) {
 }
 
 content_t gcs_policy(void *s, content_t *deals, int num_deals) {
-    SearchOptions options = simple_search_options(eval_gcs, 0, 1);
+    double eval_gcs_popcount(void *s) {
+        return eval_gcs(s) + 300 * state_popcount(s);
+    }
+
+    SearchOptions options = simple_search_options(eval_gcs, 1, 1.5);
     options.choice_sets = malloc((num_deals + 1) * sizeof(choice_set_t));
     for (int i = 0; i < num_deals + 1; ++i) {
         options.choice_sets[i] = CHOICE_SET_ALL;
@@ -159,7 +163,10 @@ content_t gcs_policy(void *s, content_t *deals, int num_deals) {
         options.choice_sets[0] = filter_chains(s, deals[0], 0);
     }
     if (count > TOTAL_SPACE - 8) {
-        options.tree_factor = 4;
+        options.tree_factor = 6;
+    }
+    if (count < TOTAL_SPACE - 32) {
+        options.eval = eval_gcs_popcount;
     }
     if (!options.choice_sets[0]) {
         options.choice_sets[0] = CHOICE_SET_ALL;
