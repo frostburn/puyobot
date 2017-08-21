@@ -4,6 +4,8 @@ ADD_LIBRARY(
   solver/policy.c
   solver/ranking.c
   solver/search.c
+  template/bottom.c
+  template/pattern.c
   animate.c
   bitboard.c
   bottom.c

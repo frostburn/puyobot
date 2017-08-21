@@ -116,7 +116,7 @@ int resolve_bottom(puyos_t *floor, int num_colors, int *color_order) {
     return chain;
 }
 
-char* color_conflicts(puyos_t *floor, int num_colors) {
+char* calculate_conflicts(puyos_t *floor, int num_colors) {
     char *conflicts = malloc(num_colors * num_colors * sizeof(char));
     puyos_t *temp = malloc(num_colors * sizeof(puyos_t));
     memcpy(temp, floor, num_colors * sizeof(puyos_t));

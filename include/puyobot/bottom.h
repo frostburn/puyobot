@@ -22,7 +22,7 @@ int clear_bottom_groups(puyos_t *floor, int num_colors, int *color_cleared);
 
 int resolve_bottom(puyos_t *floor, int num_colors, int *color_order);
 
-char* color_conflicts(puyos_t *floor, int num_colors);
+char* calculate_conflicts(puyos_t *floor, int num_colors);
 
 void print_conflicts(char* conflicts, int num_colors);
 
