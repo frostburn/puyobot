@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
-#include "puyobot/state.h"
 #include "puyobot/solver/ranking.h"
 
 void print_ranking_result(RankingResult result, int suppress_zero) {
@@ -20,8 +20,11 @@ void print_ranking_result(RankingResult result, int suppress_zero) {
         printf("\n");
     }
     printf(
-        "deals=%zu\niterations=%zu\nscore=%zu\npuyos played=%zu\npuyos landed=%zu\ngame overs=%zu\nall clears=%zu\n",
-        result.num_deals,
+        "deals=%zu\nmax iterations=%zu\nminimum chain=%zu\nmax chains=%zu\niterations=%zu\nscore=%zu\npuyos played=%zu\npuyos landed=%zu\ngame overs=%zu\nall clears=%zu\n",
+        result.options.num_deals,
+        result.options.iterations,
+        result.options.min_chain,
+        result.options.num_chains,
         result.iterations,
         result.score,
         result.puyos_played,
@@ -39,7 +42,7 @@ void print_ranking_result(RankingResult result, int suppress_zero) {
 }
 
 RankingResult add_ranking_result(RankingResult a, RankingResult b) {
-    if (a.num_deals != b.num_deals) {
+    if (a.options.num_deals != b.options.num_deals) {
         fprintf(stderr, "Cannot add results from different number of deals\n");
         exit(1);
     }
@@ -58,19 +61,24 @@ RankingResult add_ranking_result(RankingResult a, RankingResult b) {
     return c;
 }
 
-RankingResult rank_policy(size_t iterations, size_t num_deals, policy_fun policy) {
+RankingResult rank_policy(RankingOptions options, policy_fun policy) {
     RankingResult result = {0};
-    result.num_deals = num_deals;
-    result.iterations = iterations;
+    result.options = options;
+    result.iterations = 0;
 
-    content_t *deals = malloc(num_deals * sizeof(content_t));
-    for (int i = 0; i < num_deals; ++i) {
+    content_t *deals = malloc(options.num_deals * sizeof(content_t));
+    for (size_t i = 0; i < options.num_deals; ++i) {
         deals[i] = rand_piece();
     }
-    State *state = calloc(1, sizeof(State));
+    State *state = malloc(sizeof(State));
+    memcpy(state, &options.initial_state, sizeof(State));
 
-    for (size_t i = 0; i < iterations; ++i) {
-        content_t choice = policy(state, deals, num_deals);
+    size_t num_chains = 0;
+    if (!options.iterations) {
+        options.iterations = ~options.iterations;
+    }
+    for (size_t i = 0; i < options.iterations; ++i) {
+        content_t choice = policy(state, deals, (int) options.num_deals);
         if (!apply_deal_and_choice(state, deals[0], choice)) {
             ++result.game_overs;
             clear_state(state);
@@ -93,10 +101,17 @@ RankingResult rank_policy(size_t iterations, size_t num_deals, policy_fun policy
         }
         result.score += resolve(state, &chain);
         ++result.chain_counts[chain];
-        for (size_t j = 0; j < num_deals - 1; ++j) {
+        ++result.iterations;
+        if (options.min_chain && chain > options.min_chain) {
+            num_chains++;
+            if (options.num_chains && num_chains > options.num_chains) {
+                break;
+            }
+        }
+        for (size_t j = 0; j < options.num_deals - 1; ++j) {
             deals[j] = deals[j + 1];
         }
-        deals[num_deals - 1] = rand_piece();
+        deals[options.num_deals - 1] = rand_piece();
     }
     return result;
 }

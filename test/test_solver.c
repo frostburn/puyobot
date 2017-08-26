@@ -11,8 +11,8 @@ void test_ranking_add() {
     RankingResult a = {0};
     RankingResult b = {0};
 
-    a.num_deals = 1;
-    b.num_deals = 1;
+    a.options.num_deals = 1;
+    b.options.num_deals = 1;
     a.iterations = 1;
     b.iterations = 2;
     a.chain_counts[0] = 3;
@@ -20,7 +20,7 @@ void test_ranking_add() {
     a.chain_counts[1] = 5;
 
     RankingResult c = add_ranking_result(a, b);
-    assert(c.num_deals == 1);
+    assert(c.options.num_deals == 1);
     assert(c.iterations == 3);
     assert(c.chain_counts[0] == 7);
     assert(c.chain_counts[1] == 5);
@@ -29,7 +29,10 @@ void test_ranking_add() {
 }
 
 void test_ranking_random() {
-    RankingResult result = rank_policy(100, 1, random_policy);
+    RankingOptions options = {0};
+    options.iterations = 100;
+    options.num_deals = 1;
+    RankingResult result = rank_policy(options, random_policy);
     assert(result.puyos_played >= result.puyos_landed);
 }
 
@@ -39,7 +42,10 @@ content_t random_but_lands_policy(void *s, content_t *deals, int num_deals) {
 }
 
 void test_ranking_lands() {
-    RankingResult result = rank_policy(200, 1, random_but_lands_policy);
+    RankingOptions options = {0};
+    options.iterations = 200;
+    options.num_deals = 1;
+    RankingResult result = rank_policy(options, random_but_lands_policy);
     print_ranking_result(result, 1);
     assert(result.puyos_played == result.puyos_played);
 }

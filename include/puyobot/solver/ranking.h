@@ -3,10 +3,19 @@
 
 #include <stddef.h>
 
+#include "puyobot/state.h"
 #include "puyobot/solver/policy.h"
 
-typedef struct RankingResult {
+typedef struct RankingOptions {
+    State initial_state;
+    size_t iterations;
     size_t num_deals;
+    size_t min_chain;
+    size_t num_chains;
+} RankingOptions;
+
+typedef struct RankingResult {
+    RankingOptions options;
     size_t iterations;
     size_t score;
     size_t puyos_played;
@@ -20,6 +29,6 @@ void print_ranking_result(RankingResult result, int suppress_zero);
 
 RankingResult add_ranking_result(RankingResult a, RankingResult b);
 
-RankingResult rank_policy(size_t iterations, size_t num_deals, policy_fun policy);
+RankingResult rank_policy(RankingOptions options, policy_fun policy);
 
 #endif
