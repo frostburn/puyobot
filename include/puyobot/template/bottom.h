@@ -40,6 +40,8 @@ puyos_t reverse_bottom_cut(BottomTemplate *template);
 
 puyos_t cut_bottom_trigger(BottomTemplate *template);
 
+puyos_t chip_bottom_trigger(BottomTemplate *template);
+
 void calculate_bottom_conflicts(BottomTemplate *template);
 
 #endif

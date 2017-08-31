@@ -479,6 +479,42 @@ puyos_t cut_bottom_trigger(BottomTemplate *template) {
     return cut;
 }
 
+puyos_t chip_bottom_trigger(BottomTemplate *template) {
+    assert(template->num_links > 0);
+    puyos_t *floor = template->floor;
+
+    puyos_t cut = 0;
+    puyos_t rest = 0;
+    for (int j = 1; j < template->num_links; ++j) {
+        rest |= floor[j];
+    }
+    int success = 0;
+    int line_perm[WIDTH] = {0, 1, 2, 3, 4, 5};
+    for (int j = 0; j < HEIGHT; ++j) {
+        shuffle(line_perm, WIDTH, sizeof(int));
+        for (int i = 0; i < WIDTH; ++i) {
+            puyos_t p = 1ULL << (line_perm[i] + WIDTH * j);
+            if (p & floor[0]) {
+                if (!(beam_up(p) & rest)) {
+                    cut = p;
+                    success = 1;
+                    break;
+                }
+            }
+        }
+        if (success) {
+            break;
+        }
+    }
+    if (!success) {
+        return 0;
+    }
+    template->floor[0] &= ~cut;
+    handle_bottom_gravity(floor, template->num_colors);
+    template->trigger_front = cross(floor[0]) & ~(rest | floor[0]);
+    return cut;
+}
+
 void calculate_bottom_conflicts(BottomTemplate *template) {
     assert(template->num_links);
     puyos_t original = template->floor[0];

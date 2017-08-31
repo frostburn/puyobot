@@ -95,6 +95,20 @@ void test_cut_trigger() {
     free_bottom_template(template);
 }
 
+void test_chip_trigger() {
+    BottomTemplate *template = bottom_chain_of_fours(5);
+    puyos_t cut = chip_bottom_trigger(template);
+    print_bottom_template(template);
+    print_puyos(cut);
+    if (cut) {
+        assert(popcount(cut) == 1);
+        assert(popcount(template->floor[0]) == CLEAR_THRESHOLD - 1);
+    }
+    int chain = resolve_bottom(template->floor, template->num_colors, NULL);
+    assert(!!cut ^ !!chain);
+    free_bottom_template(template);
+}
+
 void test_conflicts() {
     BottomTemplate *template;
     while (1) {
@@ -127,6 +141,7 @@ int main() {
     test_conflicts();
     test_sprinkle();
     test_any_state();
+    test_chip_trigger();
 
     return 0;
 }
