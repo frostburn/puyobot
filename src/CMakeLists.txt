@@ -5,6 +5,7 @@ ADD_LIBRARY(
   solver/ranking.c
   solver/search.c
   template/bottom.c
+  template/bottom_match.c
   template/pattern.c
   animate.c
   bitboard.c
