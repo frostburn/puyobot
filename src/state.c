@@ -94,7 +94,7 @@ void print_state(State *state) {
 }
 
 void repr_state(State *state) {
-    printf("(state){{");
+    printf("(State){{");
     for (int i = 0; i < NUM_FLOORS; ++i) {
         printf("{");
         for (int j = 0; j < NUM_COLORS; ++j) {
@@ -331,14 +331,14 @@ void assert_sanity(State *state) {
     }
 }
 
-void blast_state(State *state, int num_shots) {
+void blast_state(State *state, int num_colors, int num_shots) {
     puyos_t all[NUM_FLOORS];
     get_state_mask(state, all);
     puyos_t allowed[2] = {FULL &~ DEATH_BLOCK & ~all[0], FULL & ~all[1]};
     while (num_shots && (allowed[0] || allowed[1])) {
         puyos_t p = 1ULL << (jrand() % (WIDTH * HEIGHT));
         int i = jrand() % NUM_FLOORS;
-        int k = jrand() % NUM_DEAL_COLORS;
+        int k = jrand() % num_colors;
         if (p & allowed[i]) {
             state->floors[i][k] |= p;
             allowed[i] ^= p;

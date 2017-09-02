@@ -49,6 +49,8 @@ puyos_t down(puyos_t puyos);
 
 puyos_t cross(puyos_t puyos);
 
+puyos_t blob(puyos_t puyos);
+
 puyos_t beam_up(puyos_t puyos);
 
 puyos_t beam_down(puyos_t puyos);

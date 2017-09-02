@@ -58,7 +58,7 @@ int state_is_full(State *state);
 
 void assert_sanity(State *state);
 
-void blast_state(State *state, int num_shots);
+void blast_state(State *state, int num_colors, int num_shots);
 
 int apply_deal_and_choice(State *state, content_t deal, content_t choice);
 

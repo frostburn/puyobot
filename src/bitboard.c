@@ -95,6 +95,12 @@ puyos_t cross(puyos_t puyos) {
     ) & FULL;
 }
 
+puyos_t blob(puyos_t puyos) {
+    puyos |= (puyos << V_SHIFT) | (puyos >> V_SHIFT);
+    puyos |= ((puyos & RIGHT_BLOCK) >> H_SHIFT) | ((puyos << H_SHIFT) & RIGHT_BLOCK);
+    return puyos & FULL;
+}
+
 puyos_t beam_up(puyos_t puyos) {
     puyos |= puyos >> V_SHIFT;
     puyos |= puyos >> (2 * V_SHIFT);
