@@ -31,6 +31,14 @@ void print_bottom_template(BottomTemplate *template) {
     print_bottom_spam(template->floor, template->num_links, template->num_colors);
 }
 
+BottomTemplate* template_from_floor(puyos_t *floor, int num_links) {
+    BottomTemplate *template = calloc(1, sizeof(BottomTemplate));
+    template->floor = floor;
+    template->num_links = num_links;
+    template->num_colors = num_links;
+    return template;
+}
+
 BottomTemplate* bottom_chain_of_fours(int num_links) {
     puyos_t *floor = malloc(num_links * sizeof(puyos_t));
     puyos_t *temp = malloc(num_links * sizeof(puyos_t));
@@ -67,6 +75,7 @@ BottomTemplate* bottom_chain_of_fours(int num_links) {
         }
     }
     free(temp);
+    free(color_order);
     BottomTemplate *template = calloc(1, sizeof(BottomTemplate));
     template->floor = floor;
     template->num_links = num_links;
@@ -287,6 +296,7 @@ int tail_bottom_chain(BottomTemplate *template) {
 }
 
 int spam_bottom_aura(BottomTemplate *template) {
+    assert(template->num_links == template->num_colors);
     puyos_t all = 0;
     for (int i = 0; i < template->num_links; ++i) {
         all |= template->floor[i];
@@ -306,6 +316,7 @@ int spam_bottom_aura(BottomTemplate *template) {
 }
 
 int spam_bottom(BottomTemplate *template) {
+    assert(template->num_links == template->num_colors);
     puyos_t all = 0;
     for (int i = 0; i < template->num_links; ++i) {
         all |= template->floor[i];
@@ -324,6 +335,7 @@ int spam_bottom(BottomTemplate *template) {
 }
 
 int sprinkle_bottom(BottomTemplate *template) {
+    // TODO: Allow iterative sprinkles
     handle_bottom_gravity(template->floor, template->num_colors);
     puyos_t all = 0;
     for (int i = 0; i < template->num_links; ++i) {
@@ -451,6 +463,9 @@ puyos_t reverse_bottom_cut(BottomTemplate *template) {
 }
 
 puyos_t cut_bottom_trigger(BottomTemplate *template) {
+    if (template->trigger_front) {
+        return 0;
+    }
     assert(template->num_links > 0);
     puyos_t *floor = template->floor;
 
@@ -480,6 +495,9 @@ puyos_t cut_bottom_trigger(BottomTemplate *template) {
 }
 
 puyos_t chip_bottom_trigger(BottomTemplate *template) {
+    if (template->trigger_front) {
+        return 0;
+    }
     assert(template->num_links > 0);
     puyos_t *floor = template->floor;
 
@@ -527,7 +545,7 @@ void calculate_bottom_conflicts(BottomTemplate *template) {
         template->conflicts = conflicts;
         return;
     }
-    template->conflicts = malloc(template->num_colors * template->num_colors * sizeof(char));
+    template->conflicts = calloc(template->num_colors * template->num_colors, sizeof(char));
     puyos_t all = 0;
     for (int i = 0; i < template->num_links; ++i) {
         for (int j = 0; j < template->num_links; ++j) {
@@ -536,13 +554,18 @@ void calculate_bottom_conflicts(BottomTemplate *template) {
     }
     free(conflicts);
     for (int i = template->num_links; i < template->num_colors; ++i) {
-        puyos_t aura = cross(template->floor[i]);
-        for (int j = 0; j < template->num_colors; ++j) {
+        puyos_t aura;
+        if (template->floor[i] & template->trigger_front) {
+            // XXX: Does not catch all cross conflicts.
+            aura = blob(template->floor[i]);
+        } else {
+            aura = cross(template->floor[i]);
+        }
+        // The trigger is special so we ignore conflicts there.
+        for (int j = 1; j < template->num_links; ++j) {
             int conflict = 0;
-            if (i != j && !(template->floor[i] & template->trigger_front)) {
-                if (aura & template->floor[j]) {
-                    conflict = 1;
-                }
+            if (aura & template->floor[j]) {
+                conflict = 1;
             }
             template->conflicts[i + template->num_colors * j] = conflict;
             template->conflicts[j + template->num_colors * i] = conflict;
@@ -550,9 +573,14 @@ void calculate_bottom_conflicts(BottomTemplate *template) {
     }
 }
 
-void prepare_bottom_template(BottomTemplate *template) {
-    assert(template->trigger_front);
+void prepare_bottom_template(BottomTemplate *template, int full_cut) {
+    if (full_cut) {
+        cut_bottom_trigger(template);
+    } else {
+        chip_bottom_trigger(template);
+    }
+    puyos_t cut = template->trigger_front;
     spam_bottom_aura(template);
     calculate_bottom_conflicts(template);
-    cut_bottom_trigger(template);
+    template->trigger_front = cut;
 }

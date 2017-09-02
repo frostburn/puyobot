@@ -18,6 +18,8 @@ void free_bottom_template(BottomTemplate *template);
 
 void print_bottom_template(BottomTemplate *template);
 
+BottomTemplate* template_from_floor(puyos_t *floor, int num_links);
+
 BottomTemplate* bottom_chain_of_fours(int num_links);
 
 int extend_bottom_chain(BottomTemplate *template, puyos_t fixed, int allow_cuts);
@@ -43,5 +45,7 @@ puyos_t cut_bottom_trigger(BottomTemplate *template);
 puyos_t chip_bottom_trigger(BottomTemplate *template);
 
 void calculate_bottom_conflicts(BottomTemplate *template);
+
+void prepare_bottom_template(BottomTemplate *template, int full_cut);
 
 #endif
