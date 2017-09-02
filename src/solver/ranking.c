@@ -115,3 +115,15 @@ RankingResult rank_policy(RankingOptions options, policy_fun policy) {
     }
     return result;
 }
+
+RankingResult iter_rank_policy(RankingOptions options, policy_fun policy, size_t iterations) {
+    RankingResult result = {0};
+    result.options = options;
+    for (size_t i = 0; i < iterations; ++i) {
+        result = add_ranking_result(
+            result,
+            rank_policy(options,  policy)
+        );
+    }
+    return result;
+}

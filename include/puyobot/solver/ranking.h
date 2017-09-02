@@ -31,4 +31,6 @@ RankingResult add_ranking_result(RankingResult a, RankingResult b);
 
 RankingResult rank_policy(RankingOptions options, policy_fun policy);
 
+RankingResult iter_rank_policy(RankingOptions options, policy_fun policy, size_t iterations);
+
 #endif
