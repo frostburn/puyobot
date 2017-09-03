@@ -1,4 +1,8 @@
-void wprint_state(WINDOW *win, state *s) {
+#include <stdlib.h>
+
+#include "puyobot/ui/state.h"
+
+void wprint_state(WINDOW *win, State *s) {
     wmove(win, 0, 1);
     for (int i = 0; i < WIDTH; ++i) {
         wprintw(win, " %c", 'A' + i);
@@ -52,18 +56,50 @@ void wprint_state(WINDOW *win, state *s) {
     wmove(win, HEIGHT * 2 + 1, 0);
 }
 
-void preview_deal_and_choice(WINDOW *win, state *s, content_t deal, content_t choice) {
+void just_apply_deal_and_choice(State *state, content_t deal, content_t choice) {
+    if (choice == CHOICE_PASS) {
+        return;
+    }
+    content_t color1 = deal & COLOR1_MASK;
+    content_t color2 = deal >> COLOR2_SHIFT;
+    content_t orientation = choice & ~CHOICE_X_MASK;
+    content_t color1_x = choice & CHOICE_X_MASK;
+    content_t color2_x = color1_x;
+    content_t color1_y = 0;
+    content_t color2_y = 1;
+    if (orientation == CHOICE_90) {
+        color2_x++;
+        color2_y--;
+    } else if (orientation == CHOICE_180) {
+        color1_y++;
+        color2_y--;
+    } else if (orientation == CHOICE_270) {
+        color1_x++;
+        color2_y--;
+    }
+    puyos_t all = 0;
+    for (int i = 0; i < NUM_COLORS; ++i) {
+        all |= state->floors[0][i];
+    }
+
+    puyos_t puyo1 = 1ULL << (color1_x + V_SHIFT * color1_y);
+    state->floors[0][color1] |= puyo1;
+    puyos_t puyo2 = 1ULL << (color2_x + V_SHIFT * color2_y);
+    state->floors[0][color2] |= puyo2;
+}
+
+void preview_deal_and_choice(WINDOW *win, State *s, content_t deal, content_t choice) {
     puyos_t all[2];
     get_state_mask(s, all);
-    state *c = copy_state(s);
-    apply_deal_and_choice(c, deal, choice);
+    State *c = copy_state(s);
+    just_apply_deal_and_choice(c, deal, choice);
     handle_gravity(c);
     for (int i = 0; i < NUM_FLOORS; ++i) {
         for (int j = 0; j < NUM_COLORS - 1; ++j) {
             c->floors[i][GARBAGE] |= c->floors[i][j] & ~all[i];
         }
     }
-    apply_deal_and_choice(c, deal, choice);
+    just_apply_deal_and_choice(c, deal, choice);
     for (int j = 0; j < NUM_COLORS - 1; ++j) {
         puyos_t piece = c->floors[0][j] & (TOP | (TOP << V_SHIFT));
         c->floors[0][j] ^= piece;
@@ -93,7 +129,7 @@ void preview_deals(WINDOW *win, content_t *deals, int num_deals) {
     wattroff(win, A_BOLD);
 }
 
-void wprint_player(WINDOW *win, player *p) {
+void wprint_player(WINDOW *win, Player *p) {
     wprint_state(win, &p->state);
     double sending = (p->chain_score + p->leftover_score) / (double)TARGET_SCORE;
     wprintw(win,
@@ -102,9 +138,9 @@ void wprint_player(WINDOW *win, player *p) {
     );
 }
 
-void wprint_game_status(WINDOW *win, game *g, int player_index) {
-    practice_game *pg = game_as_practice(g, player_index);
-    player *p;
+void wprint_game_status(WINDOW *win, Game *g, int player_index) {
+    PracticeGame *pg = game_as_practice(g, player_index);
+    Player *p;
     int incoming = -1;
     int delay = 0;
     if (pg) {
@@ -128,11 +164,11 @@ void wprint_game_status(WINDOW *win, game *g, int player_index) {
     }
 }
 
-state* pop_preview(state *s) {
+State* pop_preview(State *s) {
     puyos_t all[2];
-    state *c = copy_state(s);
+    State *c = copy_state(s);
     handle_gravity(c);
-    state *cc = copy_state(c);
+    State *cc = copy_state(c);
     clear_groups(cc, 0);
     get_state_mask(cc, all);
     free(cc);

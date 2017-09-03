@@ -7,6 +7,8 @@ ADD_LIBRARY(
   template/bottom.c
   template/bottom_match.c
   template/pattern.c
+  ui/init.c
+  ui/state.c
   animate.c
   bitboard.c
   bottom.c
