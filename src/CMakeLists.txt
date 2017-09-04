@@ -14,6 +14,7 @@ ADD_LIBRARY(
   bottom.c
   deal.c
   multiplayer.c
+  record.c
   state.c
   tablebase.c
   util.c
