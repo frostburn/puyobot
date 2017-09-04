@@ -44,6 +44,8 @@ ADD_EXECUTABLE(ui_endless ui/endless.c)
 TARGET_LINK_LIBRARIES(ui_endless ${CURSES_LIBRARIES} puyobot jkiss fulldict)
 ADD_EXECUTABLE(ui_versus_bot ui/versus_bot.c)
 TARGET_LINK_LIBRARIES(ui_versus_bot ${CURSES_LIBRARIES} puyobot jkiss fulldict)
+ADD_EXECUTABLE(ui_playback ui/playback.c)
+TARGET_LINK_LIBRARIES(ui_playback ${CURSES_LIBRARIES} puyobot jkiss fulldict)
 
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
