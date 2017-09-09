@@ -37,6 +37,8 @@ ADD_EXECUTABLE(rank_policies rank_policies.c)
 TARGET_LINK_LIBRARIES(rank_policies puyobot jkiss fulldict)
 ADD_EXECUTABLE(rank_templates rank_templates.c)
 TARGET_LINK_LIBRARIES(rank_templates puyobot jkiss fulldict)
+ADD_EXECUTABLE(record_policy record_policy.c)
+TARGET_LINK_LIBRARIES(record_policy puyobot jkiss fulldict)
 
 FIND_PACKAGE(Curses REQUIRED)
 INCLUDE_DIRECTORIES(${CURSES_INCLUDE_DIR})
