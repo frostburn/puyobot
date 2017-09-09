@@ -31,6 +31,26 @@ void print_bottom_template(BottomTemplate *template) {
     print_bottom_spam(template->floor, template->num_links, template->num_colors);
 }
 
+void repr_bottom_template_floor(BottomTemplate *template) {
+    printf("int num_links = %d;\n", template->num_links);
+    printf("int num_colors = %d;\n", template->num_colors);
+    printf("puyos_t floor[] = {");
+    for (int i = 0; i < template->num_colors; ++i) {
+        printf("%lluull, ", template->floor[i]);
+    }
+    printf("\b\b};\n");
+}
+
+BottomTemplate* copy_bottom_template(BottomTemplate *template) {
+    BottomTemplate *copy = malloc(sizeof(BottomTemplate));
+    *copy = *template;
+    copy->floor = malloc(copy->num_colors * sizeof(puyos_t));
+    memcpy(copy->floor, template->floor, copy->num_colors * sizeof(puyos_t));
+    copy->conflicts = NULL;
+    copy->weights = NULL;
+    return copy;
+}
+
 BottomTemplate* template_from_floor(puyos_t *floor, int num_links) {
     BottomTemplate *template = calloc(1, sizeof(BottomTemplate));
     template->floor = floor;

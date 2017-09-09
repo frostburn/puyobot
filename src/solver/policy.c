@@ -4,6 +4,8 @@
 #include <string.h>
 
 #include "puyobot/solver/policy.h"
+#include "puyobot/template/bottom.h"
+#include "puyobot/template/bottom_match.h"
 
 content_t random_policy(void *s, content_t *deals, int  num_deals) {
     return CHOICES[jrand() % NUM_CHOICES];
@@ -174,4 +176,13 @@ content_t gcs_policy(void *s, content_t *deals, int num_deals) {
     content_t choice = rand_choice(solve(s, deals, num_deals, options));
     free(options.choice_sets);
     return choice;
+}
+
+content_t template_policy(BottomTemplate *template, int depth, double factor, void *s, content_t *deals, int num_deals) {
+    double eval_template(void *s) {
+        BottomMatchResult result = match_bottom(s, template);
+        return simple_bottom_match_score(template, result);
+    }
+    SearchOptions options = simple_search_options(eval_template, depth, factor);
+    return rand_choice(solve(s, deals, num_deals, options));
 }

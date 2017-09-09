@@ -18,6 +18,10 @@ void free_bottom_template(BottomTemplate *template);
 
 void print_bottom_template(BottomTemplate *template);
 
+void repr_bottom_template_floor(BottomTemplate *template);
+
+BottomTemplate* copy_bottom_template(BottomTemplate *template);
+
 BottomTemplate* template_from_floor(puyos_t *floor, int num_links);
 
 BottomTemplate* bottom_chain_of_fours(int num_links);
