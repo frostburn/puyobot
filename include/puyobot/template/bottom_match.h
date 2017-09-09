@@ -28,4 +28,6 @@ BottomMatchResult match_bottom(State *s, BottomTemplate *template);
 
 double bottom_match_score(BottomTemplate *template, BottomMatchResult result);
 
+double simple_bottom_match_score(BottomTemplate *template, BottomMatchResult result);
+
 #endif

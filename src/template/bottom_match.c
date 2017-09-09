@@ -94,6 +94,30 @@ BottomMatchResult match_bottom(State *s, BottomTemplate *template) {
             }
         }
     }
+    // Check implicit conflicts. Pretty rare.
+    // TODO: Test if the code bellow is correct.
+    // for (int i = 0; i < num_colors; ++i) {
+    //     if (assignments[i] >= 0) {
+    //         continue;
+    //     }
+    //     int good = 0;
+    //     for (int j = 0; j < NUM_COLORS; ++j) {
+    //         int bad = 0;
+    //         for (int k = 0; k < num_colors; ++k) {
+    //             if (assignments[k] == j && template->conflicts[i + k * num_colors]) {
+    //                 bad = 1;
+    //                 break;
+    //             }
+    //         }
+    //         if (!bad) {
+    //             good = 1;
+    //             break;
+    //         }
+    //     }
+    //     if (!good) {
+    //         num_color_conflicts++;  // XXX: New variable for these?
+    //     }
+    // }
     free(assignments);
 
     puyos_t rest_of_the_chain = all_chain ^ template->floor[0];
@@ -175,4 +199,8 @@ double bottom_match_score(BottomTemplate *template, BottomMatchResult result) {
         return score - penalty - 2;
     }
     return score;
+}
+
+double simple_bottom_match_score(BottomTemplate *template, BottomMatchResult result) {
+    return popcount(result.on_chain) - 0.513 * result.num_color_conflicts - 0.17 * result.num_spam_conflicts;
 }
