@@ -7,25 +7,28 @@
 #include "puyobot/ui/state.h"
 #include "puyobot/record.h"
 
-PlayRecord* todo_actually_load_stuff() {
-    PlayRecord *record = play_record_new();
-    for (int i = 0; i < 100; ++i) {
-        content_t deal = rand_piece();
-        record_move(record, &deal, 1, CHOICES[jrand() % NUM_CHOICES]);
+void wprint_boxed(WINDOW *win, char *str) {
+    size_t i = 0;
+    while (str[i]) {
+        waddch(win, str[i]);
+        if (str[i] == '\n') {
+            waddch(win, ' ');
+        }
+        ++i;
     }
-    return record;
 }
 
-void playback() {
+void playback(PlayRecord *record) {
     WINDOW *state_win = newwin(2 * HEIGHT + 2, 2 * WIDTH + 3, 0, 0);
     WINDOW *deal_win = newwin(7, 3, 0, 2 * WIDTH + 5);
     WINDOW *score_win = newwin(4, 30, 7, 2 * WIDTH + 5);
+    WINDOW *message_win = newwin(11, 45, 11, 2 * WIDTH + 5);
     box(state_win, 0, 0);
     box(deal_win, 0, 0);
     box(score_win, 0, 0);
+    box(message_win, 0, 0);
     refresh();
 
-    PlayRecord *record = todo_actually_load_stuff();  // TODO
     size_t record_index = 0;
 
     State *history = malloc(sizeof(State));
@@ -40,17 +43,24 @@ void playback() {
     while (game_running) {
         int choosing = 1;
         while (choosing) {
+            werase(score_win);
             wmove(score_win, 1, 1);
-            wprintw(score_win, "Score=%d              ", score_history[record_index]);
+            wprintw(score_win, "Score=%d", score_history[record_index]);
             wmove(score_win, 2, 1);
-            wprintw(score_win, "Chain=%d              ", chain_history[record_index]);
+            wprintw(score_win, "Chain=%d", chain_history[record_index]);
             box(score_win, 0, 0);
+
+            werase(message_win);
+            wmove(message_win, 1, 1);
+            wprint_boxed(message_win, record->messages + record_index * RECORD_MESSAGE_LEN);
+            box(message_win, 0, 0);
 
             preview_deal_and_choice(state_win, history + record_index, record->deals[record_index], record->choices[record_index]);
             preview_deals(deal_win, record->deals + record_index + 1, NUM_DEALS - 1);
             wrefresh(state_win);
             wrefresh(deal_win);
             wrefresh(score_win);
+            wrefresh(message_win);
             int ch = getch();
             switch (ch)
             {
@@ -96,12 +106,19 @@ void playback() {
     delwin(state_win);
     delwin(score_win);
     delwin(deal_win);
+    delwin(message_win);
 }
 
-int main() {
+int main(int argc, char *argv[]) {
+    if (argc < 2) {
+        printf("Please enter a filename\n");
+        return 0;
+    }
+
     init_ui();
 
-    playback();
+    PlayRecord *record = play_record_load(argv[1]);
+    playback(record);
 
     endwin();
     return 0;
