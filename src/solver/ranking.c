@@ -102,9 +102,9 @@ RankingResult rank_policy(RankingOptions options, policy_fun policy) {
         result.score += resolve(state, &chain);
         ++result.chain_counts[chain];
         ++result.iterations;
-        if (options.min_chain && chain > options.min_chain) {
+        if (options.min_chain && chain >= options.min_chain) {
             num_chains++;
-            if (options.num_chains && num_chains > options.num_chains) {
+            if (options.num_chains && num_chains >= options.num_chains) {
                 break;
             }
         }
@@ -122,7 +122,7 @@ RankingResult iter_rank_policy(RankingOptions options, policy_fun policy, size_t
     for (size_t i = 0; i < iterations; ++i) {
         result = add_ranking_result(
             result,
-            rank_policy(options,  policy)
+            rank_policy(options, policy)
         );
     }
     return result;
