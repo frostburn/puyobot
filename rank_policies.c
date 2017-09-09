@@ -4,6 +4,8 @@
 
 #include <omp.h>
 
+#include "jkiss/jkiss.h"
+
 #include "puyobot/solver/policy.h"
 #include "puyobot/solver/ranking.h"
 #include "puyobot/template/bottom.h"
