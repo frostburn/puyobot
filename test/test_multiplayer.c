@@ -129,16 +129,17 @@ void test_practice_time_and_clear() {
     pg->delay = 100;
     pg->incoming = 100;
 
-    step_practice(pg, 0, 0);
+    double score;
+    step_practice(pg, 0, 0, &score);
     print_practice(pg);
     assert(pg->delay == 99);
-    step_practice(pg, 0, 0);
+    step_practice(pg, 0, 0, &score);
     assert(pg->delay == 97);
     assert(pg->player.all_clear_bonus);
     print_practice(pg);
-    step_practice(pg, 0, 0);
+    step_practice(pg, 0, 0, &score);
     print_practice(pg);
-    step_practice(pg, 0, 0);
+    step_practice(pg, 0, 0, &score);
     print_practice(pg);
     print_deals(pg->deals, pg->num_deals);
     assert(pg->delay == 94);

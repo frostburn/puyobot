@@ -56,38 +56,6 @@ void wprint_state(WINDOW *win, State *s) {
     wmove(win, HEIGHT * 2 + 1, 0);
 }
 
-void just_apply_deal_and_choice(State *state, content_t deal, content_t choice) {
-    if (choice == CHOICE_PASS) {
-        return;
-    }
-    content_t color1 = deal & COLOR1_MASK;
-    content_t color2 = deal >> COLOR2_SHIFT;
-    content_t orientation = choice & ~CHOICE_X_MASK;
-    content_t color1_x = choice & CHOICE_X_MASK;
-    content_t color2_x = color1_x;
-    content_t color1_y = 0;
-    content_t color2_y = 1;
-    if (orientation == CHOICE_90) {
-        color2_x++;
-        color2_y--;
-    } else if (orientation == CHOICE_180) {
-        color1_y++;
-        color2_y--;
-    } else if (orientation == CHOICE_270) {
-        color1_x++;
-        color2_y--;
-    }
-    puyos_t all = 0;
-    for (int i = 0; i < NUM_COLORS; ++i) {
-        all |= state->floors[0][i];
-    }
-
-    puyos_t puyo1 = 1ULL << (color1_x + V_SHIFT * color1_y);
-    state->floors[0][color1] |= puyo1;
-    puyos_t puyo2 = 1ULL << (color2_x + V_SHIFT * color2_y);
-    state->floors[0][color2] |= puyo2;
-}
-
 void preview_deal_and_choice(WINDOW *win, State *s, content_t deal, content_t choice) {
     puyos_t all[2];
     get_state_mask(s, all);

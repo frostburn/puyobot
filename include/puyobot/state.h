@@ -62,6 +62,8 @@ void blast_state(State *state, int num_colors, int num_shots);
 
 int apply_deal_and_choice(State *state, content_t deal, content_t choice);
 
+void just_apply_deal_and_choice(State *state, content_t deal, content_t choice);
+
 void clear_deal_and_choice(State *state);
 
 int step_state(void *s, content_t deal, content_t choice, double *score);

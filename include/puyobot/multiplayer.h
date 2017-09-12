@@ -68,6 +68,6 @@ void* copy_practice(void *pg);
 
 void append_practice_deal(PracticeGame *pg, content_t deal);
 
-double step_practice(void *_pg, content_t deal, content_t choice);
+int step_practice(void *_pg, content_t deal, content_t choice, double *score);
 
 #endif

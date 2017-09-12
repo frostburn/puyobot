@@ -2,6 +2,7 @@ ADD_LIBRARY(
   puyobot
   solver/eval.c
   solver/policy.c
+  solver/game_policy.c
   solver/ranking.c
   solver/search.c
   template/bottom.c

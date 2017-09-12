@@ -5,6 +5,7 @@
 #include "puyobot/ui/init.h"
 #include "puyobot/ui/state.h"
 #include "puyobot/solver/policy.h"
+#include "puyobot/solver/game_policy.h"
 
 void play_multiplayer() {
     WINDOW *left_player_win = newwin(2 * HEIGHT + 2, 2 * WIDTH + 3, 0, 0);
@@ -47,12 +48,7 @@ void play_multiplayer() {
         wprint_game_status(right_status_win, g, 1);
         box(right_status_win, 0, 0);
 
-        pg = game_as_practice(g, 1);
-        if (pg) {
-            choices[1] = random_policy(pg, pg->deals, pg->num_deals);
-            preview_deal_and_choice(right_player_win, &pg->player.state, pg->deals[0], choices[1]);
-            free(pg);
-        }
+        choices[1] = gcn_game_policy(g, 1);
 
         wrefresh(right_player_win);
         wrefresh(left_deal_win);

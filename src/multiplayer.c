@@ -259,22 +259,22 @@ void append_practice_deal(PracticeGame *pg, content_t deal) {
     pg->deals[MAX_DEALS - 1] = deal;
 }
 
-double step_practice(void *_pg, content_t deal, content_t choice) {
+int step_practice(void *_pg, content_t deal, content_t choice, double *score) {
     PracticeGame *pg = _pg;
-    double score = 0;
     State *s = &pg->player.state;
     if (pg->delay == 0) {
         pg->player.pending_nuisance += pg->incoming;
         pg->incoming = 0;
     }
     // Assume deal is pg->deals[0] for now.
-    int valid = apply_deal_and_choice(s, deal, choice);
+    if (!apply_deal_and_choice(s, deal, choice)) {
+        return 0;
+    }
     do {
         step_player(&pg->player);
         ++pg->time;
         --pg->delay;
     } while (pg->player.chain);
-    score += pg->player.chain_score;
     int outgoing = send_nuisance(&pg->player);
     receive_nuisance(&pg->player);
     handle_gravity(s);
@@ -283,14 +283,11 @@ double step_practice(void *_pg, content_t deal, content_t choice) {
         pg->incoming = 0;
         pg->delay = 0;
     }
-    if (!valid) {
-        clear_player(&pg->player);
-        ++pg->player.game_overs;
-        score = -DEATH_SCORE;
-    }
+    outgoing -= pg->incoming;
     append_practice_deal(pg, rand_piece());
     if (pg->delay < 0) {
         pg->delay = 0;
     }
-    return score;
+    *score = outgoing;
+    return 1;
 }
