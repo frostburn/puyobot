@@ -5,17 +5,6 @@
 
 #include "puyobot/util.h"
 
-void test_shuffle() {
-    short int values[] = {0, 1, 2, 3, 4, 5, 6, 7};
-    shuffle(values, 8, sizeof(short int));
-    unsigned char flags = 0;
-    for (int i = 0; i < 8; ++i) {
-        printf("%d\n", values[i]);
-        flags |= 1 << values[i];
-    }
-    assert(flags = ~0);
-}
-
 void test_bitset() {
     assert(bitset_rand_index(0) == -1);
     for (int i = 0; i < 100; ++i) {
@@ -38,6 +27,5 @@ void test_bitset() {
 int main() {
     jkiss_init();
 
-    test_shuffle();
     test_bitset();
 }

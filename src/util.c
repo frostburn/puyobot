@@ -44,25 +44,6 @@ char* file_to_buffer(char *filename) {
     return buffer;
 }
 
-// Arrange the N elements of ARRAY in random order.
-void shuffle(void *array, size_t n, size_t element_size) {
-    if (n <= 1) {
-        return;
-    }
-    void *a1;
-    void *a2;
-    void *temp = malloc(element_size);
-    for (size_t i = 0; i < n - 1; ++i) {
-      size_t j = i + jrand() % (n - i);
-      a1 = array + i * element_size;
-      a2 = array + j * element_size;
-      memcpy(temp, a2, element_size);
-      memcpy(a2, a1, element_size);
-      memcpy(a1, temp, element_size);
-    }
-    free(temp);
-}
-
 int bitset_rand_index(unsigned int bitset) {
     if (!bitset) {
         return -1;

@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "jkiss/jkiss.h"
+#include "jkiss/util.h"
 
 #include "puyobot/util.h"
 #include "puyobot/bottom.h"
