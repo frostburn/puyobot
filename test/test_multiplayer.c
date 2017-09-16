@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -146,8 +147,40 @@ void test_practice_time_and_clear() {
     assert(pg->incoming < 80);
 }
 
+void test_result() {
+    Game *g = new_game(2, 3);
+    content_t choices[2];
+    double result;
+
+    choices[0] = CHOICES[jrand() % NUM_CHOICES];
+    choices[1] = CHOICES[jrand() % NUM_CHOICES];
+    result = step_game(g, choices);
+    assert(isnan(result));
+
+    choices[0] = CHOICES[jrand() % NUM_CHOICES];
+    choices[1] = CHOICE_PASS;
+    result = step_game(g, choices);
+    assert(result > 0);
+
+    choices[0] = CHOICE_PASS;
+    choices[1] = CHOICES[jrand() % NUM_CHOICES];
+    result = step_game(g, choices);
+    assert(result < 0);
+
+    choices[0] = CHOICE_PASS;
+    choices[1] = CHOICE_PASS;
+    result = step_game(g, choices);
+    assert(result == 0);
+
+    assert(g->players[0].game_overs == 2);
+    assert(g->players[1].game_overs == 2);
+
+    free_game(g);
+}
+
 int main() {
     test_game_symmetry();
     test_mirror_game();
     test_practice_time_and_clear();
+    test_result();
 }

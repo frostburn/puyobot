@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <math.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -38,7 +39,8 @@ Game* new_game(int num_players, int num_deals) {
     return g;
 }
 
-void free_game(Game *g) {
+void free_game(void *game) {
+    Game *g = game;
     free(g->players);
     free(g->deals);
     free(g);
@@ -133,10 +135,12 @@ int step_player(Player *p) {
     return score;
 }
 
-void step_game(Game *g, content_t *choices) {
+double step_game(void *game, content_t *choices) {
+    Game *g = game;
     int nuisance_receivers[MAX_PLAYERS] = {0};
     int has_stepped[MAX_PLAYERS] = {0};
     int game_over = 0;
+    double result = NAN;
     for (int i = 0; i < g->num_players; ++i) {
         Player *p = g->players + i;
         if (p->chain) {
@@ -150,6 +154,15 @@ void step_game(Game *g, content_t *choices) {
                     }
                 }
                 nuisance_receivers[i] = 1;
+            }
+            if (choices[i] != CHOICE_PASS) {
+                game_over = 1;
+                ++p->game_overs;
+                if (!isnan(result)) {
+                    result = 0;
+                } else {
+                    result = 2 * i - 1;
+                }
             }
         }
     }
@@ -171,6 +184,11 @@ void step_game(Game *g, content_t *choices) {
         if (!valid) {
             game_over = 1;
             ++p->game_overs;
+            if (!isnan(result)) {
+                result = 0;
+            } else {
+                result = 2 * i - 1;
+            }
         }
         // Just some memory management.
         if (p->deal_index + g->num_deals >= g->total_num_deals) {
@@ -200,6 +218,18 @@ void step_game(Game *g, content_t *choices) {
         }
     }
     ++g->time;
+    return result;
+}
+
+void* copy_game(void *g) {
+    Game *game = g;
+    Game *c = malloc(sizeof(Game));
+    memcpy(c, game, sizeof(Game));
+    c->players = malloc(c->num_players * sizeof(Player));
+    c->deals = malloc(c->total_num_deals * sizeof(content_t));
+    memcpy(c->players, game->players, c->num_players * sizeof(Player));
+    memcpy(c->deals, game->deals, c->total_num_deals * sizeof(content_t));
+    return c;
 }
 
 PracticeGame* game_as_practice(Game *g, int player_index) {

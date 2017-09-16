@@ -50,7 +50,7 @@ void print_practice(PracticeGame *pg);
 
 Game* new_game(int num_players, int num_deals);
 
-void free_game(Game *g);
+void free_game(void *g);
 
 void clear_player(Player *p);
 
@@ -60,7 +60,9 @@ void receive_nuisance(Player *p);
 
 int step_player(Player *p);
 
-void step_game(Game *g, content_t *choices);
+double step_game(void *g, content_t *choices);
+
+void* copy_game(void *game);
 
 PracticeGame* game_as_practice(Game *g, int player_index);
 

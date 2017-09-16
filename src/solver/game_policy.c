@@ -44,3 +44,15 @@ content_t gcn_game_policy(Game *g, int player_index) {
     free(pg);
     return choice;
 }
+
+void multi_random_policy(void *g, content_t *choices) {
+    choices[0] = CHOICES[jrand() % NUM_CHOICES];
+    choices[1] = CHOICES[jrand() % NUM_CHOICES];
+}
+
+void multi_random_alive_policy(void *g, content_t *choices) {
+    Game *game = g;
+    for (int i = 0; i < game->num_players; ++i) {
+        choices[i] = random_but_alive_policy(&game->players[i].state, game->deals + game->players[i].deal_index, game->num_deals);
+    }
+}

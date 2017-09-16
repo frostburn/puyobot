@@ -5,6 +5,7 @@ ADD_LIBRARY(
   solver/game_policy.c
   solver/ranking.c
   solver/search.c
+  solver/simul_tree.c
   template/bottom.c
   template/bottom_match.c
   template/pattern.c
