@@ -28,7 +28,7 @@ typedef struct State
     puyos_t floors[NUM_FLOORS][NUM_COLORS];
 } State;
 
-State* copy_state(State *state);
+void* copy_state(void *state);
 
 void clear_state(State *state);
 

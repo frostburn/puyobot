@@ -1,13 +1,14 @@
+#ifndef PUYOBOT_SOLVER_SIMUL_TREE_H_GUARD
+#define PUYOBOT_SOLVER_SIMUL_TREE_H_GUARD
+
 #include "puyobot/deal.h"
 #include "puyobot/multiplayer.h"
 #include "puyobot/solver/game_policy.h"
+#include "puyobot/solver/tree.h"
 
-#define NUM_REDUCED_DEALS (NUM_DEAL_COLORS + (NUM_DEAL_COLORS * (NUM_DEAL_COLORS - 1)) / 2)
 #define NUM_PLAYERS (2)
 
 typedef double (*multi_step_fun)(void *s, content_t *choices);
-
-typedef unsigned long long int count_t;
 
 typedef struct SimulNode
 {
@@ -52,3 +53,5 @@ void simul_mc_choose(SimulNode *root, content_t *choices);
 void simul_mc_free(SimulNode *root);
 
 SimulMcOptions get_simul_mc_options();
+
+#endif

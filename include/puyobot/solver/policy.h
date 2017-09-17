@@ -15,6 +15,8 @@ content_t random_policy(void *s, content_t *deals, int  num_deals);
 
 content_t random_but_alive_policy(void *s, content_t *deals, int  num_deals);
 
+content_t random_survival_policy(void *s, content_t *deals, int  num_deals);
+
 content_t frog_policy(void *s, content_t *deals, int num_deals);
 
 content_t half_deep_policy(void *s, content_t *deals, int num_deals);

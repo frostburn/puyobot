@@ -30,6 +30,19 @@ content_t random_but_alive_policy(void *s, content_t *deals, int  num_deals) {
     return CHOICE_PASS;
 }
 
+content_t random_survival_policy(void *s, content_t *deals, int  num_deals) {
+    State *c = copy_state(s);
+    for (int trial = 0; trial < 3; ++trial) {
+        content_t choice = CHOICES[jrand() % NUM_CHOICES];
+        if (apply_deal_and_choice(c, deals[0], choice)) {
+            free(c);
+            return choice;
+        }
+    }
+    free(c);
+    return CHOICES[jrand() % NUM_CHOICES];
+}
+
 static choice_set_t FROG_CHOICES[3+1] = {
     CHOICE_SET_FROG_LEFT,
     CHOICE_SET_FROG_LEFT,

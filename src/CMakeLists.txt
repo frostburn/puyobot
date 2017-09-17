@@ -6,6 +6,7 @@ ADD_LIBRARY(
   solver/ranking.c
   solver/search.c
   solver/simul_tree.c
+  solver/tree.c
   template/bottom.c
   template/bottom_match.c
   template/pattern.c

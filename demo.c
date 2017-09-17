@@ -1,8 +1,10 @@
+#include <math.h>
 #include <stdlib.h>
 #include <stdio.h>
 
 #include "puyobot/animate.h"
 #include "puyobot/solver/policy.h"
+#include "puyobot/solver/tree.h"
 
 #define NUM_DEALS (3)
 
@@ -118,11 +120,31 @@ size_t show_chain(int min_links, int use_extensions, int use_tailing) {
 }
 */
 
+int step_state_sqrt(void *state, content_t deal, content_t choice, double *score) {
+    int valid = step_state(state, deal, choice, score);
+    *score = sqrt(*score);
+    return valid;
+}
+
+content_t policy(void *state, content_t *deals, int num_deals) {
+    McOptions options = get_mc_options(random_survival_policy);
+    options.step = step_state_sqrt;
+    options.score_threshold = 20;
+    options.exploration = 500;
+    TreeNode *root = mc_init(state, deals, num_deals, options);
+    mc_iterate(state, root, 5000, options);
+    content_t choice = mc_choose(root);
+    // print_tree_node(root, 1);
+    // print_state(state);
+    mc_free(root);
+    return choice;
+}
+
 int main() {
     jkiss_init();
 
     State *state = calloc(1, sizeof(State));
-    policy_demo(state, 1, 100, group_chain_policy);
+    policy_demo(state, 0, 1000, policy);
 
     return 0;
 }

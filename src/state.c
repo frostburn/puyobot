@@ -14,8 +14,8 @@ const int CHAIN_POWERS[NUM_CHAIN_POWERS] = {
     320, 352, 384, 416, 448, 480, 512, 544, 576, 608, 640, 672
 };
 
-State* copy_state(State *state) {
-    State *copy = malloc(sizeof(State));
+void* copy_state(void *state) {
+    void *copy = malloc(sizeof(State));
     memcpy(copy, state, sizeof(State));
     return copy;
 }
@@ -435,13 +435,9 @@ int step_state(void *s, content_t deal, content_t choice, double *score) {
     return 1;
 }
 
-void *_copy_state(void *s) {
-    return copy_state(s);
-}
-
 SearchOptions simple_search_options(eval_fun eval, int depth, double tree_factor) {
     return (SearchOptions) {
-        .copy = _copy_state,
+        .copy = copy_state,
         .delete = free,
         .step = step_state,
         .eval = eval,
