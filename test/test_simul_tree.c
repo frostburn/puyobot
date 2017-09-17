@@ -9,10 +9,10 @@
 void test_iterate() {
     Game *game = new_game(NUM_PLAYERS, 1);
 
-    SimulNode *root = mc_init(game);
-    McOptions options = get_mc_options();
-    mc_iterate(game, root, 1, options);
-    mc_free(root);
+    SimulNode *root = simul_mc_init(game);
+    SimulMcOptions options = get_simul_mc_options();
+    simul_mc_iterate(game, root, 1, options);
+    simul_mc_free(root);
 }
 
 int main() {

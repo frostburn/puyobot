@@ -24,17 +24,17 @@ int main(int argc, char *argv[]) {
     Game *game = new_game(NUM_PLAYERS, NUM_DEALS);
 
     for (int i = 0; i < 100; ++i) {
-        SimulNode *root = mc_init(game);
-        McOptions options = get_mc_options();
+        SimulNode *root = simul_mc_init(game);
+        SimulMcOptions options = get_simul_mc_options();
         options.policy = multi_random_alive_policy;
         options.exploration = 0;
 
-        mc_iterate(game, root, 1000, options);
+        simul_mc_iterate(game, root, 1000, options);
 
         print_simul_node(root, 0);
 
-        mc_choose(root, choices);
-        mc_free(root);
+        simul_mc_choose(root, choices);
+        simul_mc_free(root);
 
         step_game(game, choices);
         print_player(game->players + 0);

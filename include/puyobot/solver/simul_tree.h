@@ -13,42 +13,42 @@ typedef struct SimulNode
 {
     count_t wins;
     count_t visits;
-    struct DealtNode *deals;
+    struct SimulDealNode *deals;
     char num_deals;
     struct SimulNode *parent;
 } SimulNode;
 
-typedef struct DealtNode
+typedef struct SimulDealNode
 {
     content_t deal[NUM_PLAYERS];
     float probability;
-    struct ChoiceNode *choices;
+    struct SimulChoiceNode *choices;
     short int num_choices;
-} DealtNode;
+} SimulDealNode;
 
-typedef struct ChoiceNode
+typedef struct SimulChoiceNode
 {
     char choice[NUM_PLAYERS];
     SimulNode target;
-} ChoiceNode;
+} SimulChoiceNode;
 
-typedef struct McOptions
+typedef struct SimulMcOptions
 {
     copy_fun copy;
     delete_fun delete;
     multi_step_fun step;
     multi_policy_fun policy;
     double exploration;
-} McOptions;
+} SimulMcOptions;
 
 void print_simul_node(SimulNode *root, int show_children);
 
-SimulNode* mc_init(Game *game);
+SimulNode* simul_mc_init(Game *game);
 
-void mc_iterate(void *state, SimulNode *root, size_t iterations, McOptions options);
+void simul_mc_iterate(void *state, SimulNode *root, size_t iterations, SimulMcOptions options);
 
-void mc_choose(SimulNode *root, content_t *choices);
+void simul_mc_choose(SimulNode *root, content_t *choices);
 
-void mc_free(SimulNode *root);
+void simul_mc_free(SimulNode *root);
 
-McOptions get_mc_options();
+SimulMcOptions get_simul_mc_options();
