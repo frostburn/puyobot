@@ -96,7 +96,7 @@ void simul_mc_single_round(void *state, SimulNode *root, SimulMcOptions options)
     double result;
     SimulNode *leaf = simul_mc_tree_policy(state, root, options, &result);
 
-    if (!isnan(result)) {
+    if (isnan(result)) {
         result = simul_mc_playout(state, options);
     }
     SimulNode *node = leaf;
