@@ -11,10 +11,10 @@ double _eval_gcn_practice(void *_pg) {
     PracticeGame *pg = _pg;
     State *s = &pg->player.state;
     double groups = eval_groups(s);
-    double chains = eval_groups(s);
+    double chains = eval_chains(s);
     double nuisance = popcount(s->floors[0][GARBAGE]) + popcount(s->floors[1][GARBAGE]);
 
-    return groups + 20 * chains - nuisance * 0.96 - pg->incoming / (0.3 + 0.01 * pg->delay);
+    return 30 * groups + 20 * chains - nuisance * 0.96 - pg->incoming / (0.3 + 0.01 * pg->delay);
 }
 
 content_t gcn_practice_policy(void *_pg, content_t *deals, int num_deals) {
