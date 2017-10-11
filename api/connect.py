@@ -172,7 +172,7 @@ class Game(object):
         return string
 
 
-def main(command, url, autojoin=False):
+def main(command, url, autojoin=False, name="frostbot"):
     mode = 'puyo:duel'
     if url.endswith('/'):
         url = url[:-1]
@@ -182,7 +182,7 @@ def main(command, url, autojoin=False):
             sleep(1)
         response = requests.get('{}/game/list?status=open&mode={}'.format(url, mode))
         payload = {
-            'metadata': {'name': 'frostbot'},
+            'metadata': {'name': name},
         }
         if (response.json()['games']) and autojoin:
             payload['id'] = response.json()['games'][0]['id']
@@ -248,7 +248,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Connection layer between a HTTP API and a binary socket')
     parser.add_argument('command', metavar='command', type=str, help='Executable that calculates the next move')
     parser.add_argument('url', metavar='url', type=str, help='API URL')
+    parser.add_argument('--name', metavar='name', type=str, help='Name of the bot', default="frostbot")
     parser.add_argument('--autojoin', action='store_true')
 
     args = parser.parse_args()
-    main(args.command, args.url, args.autojoin)
+    main(args.command, args.url, args.autojoin, args.name)
