@@ -59,6 +59,11 @@ void policy_demo(State *s, int do_animation, size_t iterations, policy_fun polic
         free(c);
         int chain = 0;
         int score = resolve(s, &chain);
+        if (chain) {
+            printf("Last chain = %d                                                  \n\n", chain);
+            print_state(s);
+            cb(s);
+        }
         total_score += score;
         puyos_played += 2;
         if (chain > max_chain) {
@@ -130,10 +135,14 @@ content_t policy(void *state, content_t *deals, int num_deals) {
     McOptions options = get_mc_options(random_survival_policy);
     options.step = step_state_sqrt;
     options.score_threshold = 20;
-    options.exploration = 500;
+    options.exploration = 50;
     TreeNode *root = mc_init(state, deals, num_deals, options);
-    mc_iterate(state, root, 5000, options);
-    content_t choice = mc_choose(root);
+    mc_iterate(state, root, 50000, options);
+    choice_set_t allowed = CHOICE_SET_ALL;
+    if (state_popcount(state) + 32 < TOTAL_SPACE) {
+        allowed = filter_chains(state, deals[0], 0);
+    }
+    content_t choice = mc_choose(root, allowed);
     // print_tree_node(root, 1);
     // print_state(state);
     mc_free(root);

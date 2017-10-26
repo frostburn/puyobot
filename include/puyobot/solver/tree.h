@@ -48,7 +48,7 @@ TreeNode* mc_init(void *state, content_t *deals, int num_deals, McOptions option
 
 void mc_iterate(void *state, TreeNode *root, size_t iterations, McOptions options);
 
-content_t mc_choose(TreeNode *root);
+content_t mc_choose(TreeNode *root, choice_set_t allowed);
 
 McOptions get_mc_options(policy_fun policy);
 

@@ -12,7 +12,8 @@
 #include "puyobot/util.h"
 
 #define MC_DEATH_SCORE_TREE (-1)
-#define MC_DEATH_SCORE_PLAYOUT (-100)
+#define MC_DEATH_SCORE_PLAYOUT (-10)
+#define MC_DEATH_SCORE_EXPAND (-1000)
 
 void print_tree_node(TreeNode *root, int show_children) {
     printf("TreeNode visits=%llu score=%f\n", root->visits, root->score);
@@ -68,10 +69,11 @@ TreeNode* mc_tree_policy(void *state, TreeNode *root, McOptions options, double 
         return root;
     }
     if (score > options.score_threshold) {
+        ++choice->target.visits;
+        choice->target.score += score;
         *result = score;
         return root;
     }
-    // XXX: Should we collect sub-threshold score too?
     return mc_tree_policy(state, &choice->target, options, result);
 }
 
@@ -125,7 +127,7 @@ void mc_expand(void *state, TreeNode *root, McOptions options) {
                 choice->target.visits = 1;
             }
             if (!deal->num_choices) {
-                deal->choices[0].target.score = 0;
+                deal->choices[0].target.score = MC_DEATH_SCORE_EXPAND;
                 deal->choices[0].target.visits = 1000000;
                 deal->choices[0].target.parent = root;
                 deal->choices[0].content = CHOICE_PASS;
@@ -223,11 +225,22 @@ void mc_iterate(void *state, TreeNode *root, size_t iterations, McOptions option
     }
 }
 
-content_t mc_choose(TreeNode *root) {
+content_t mc_choose(TreeNode *root, choice_set_t allowed) {
     assert(root->num_deals == 1);
     assert(root->deals->num_choices);
     McOptions options;
     options.exploration = 0;
+    if (allowed) {
+        for (int i = 0; i < NUM_CHOICES; ++i) {
+            for (int j = 0; j < root->deals->num_choices; ++j) {
+                if (root->deals->choices[j].content == CHOICES[i]) {
+                    if (!(allowed & (1 << i))) {
+                        root->deals->choices[j].target.score = -INFINITY;
+                    }
+                }
+            }
+        }
+    }
     ChoiceNode *node = mc_tree_choose(root->deals, options);
     return node->content;
 }
