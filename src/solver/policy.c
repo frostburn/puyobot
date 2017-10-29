@@ -1,9 +1,11 @@
 #include <assert.h>
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "puyobot/solver/policy.h"
+#include "puyobot/solver/tree.h"
 #include "puyobot/template/bottom.h"
 #include "puyobot/template/bottom_match.h"
 
@@ -67,6 +69,11 @@ content_t half_deep_policy(void *s, content_t *deals, int num_deals) {
     assert(num_deals == 3);
     SearchOptions options = simple_search_options(eval_zero, 2, 1);
     options.choice_sets = HALF_DEEP_CHOICES;
+    return rand_choice(solve(s, deals, num_deals, options));
+}
+
+content_t deep_policy(void *s, content_t *deals, int num_deals) {
+    SearchOptions options = simple_search_options(eval_zero, 2, 1);
     return rand_choice(solve(s, deals, num_deals, options));
 }
 
@@ -198,4 +205,26 @@ content_t template_policy(BottomTemplate *template, int depth, double factor, vo
     }
     SearchOptions options = simple_search_options(eval_template, depth, factor);
     return rand_choice(solve(s, deals, num_deals, options));
+}
+
+int _step_state_sqrt(void *state, content_t deal, content_t choice, double *score) {
+    int valid = step_state(state, deal, choice, score);
+    *score = sqrt(*score);
+    return valid;
+}
+
+content_t monte_carlo_policy(void *state, content_t *deals, int num_deals) {
+    McOptions options = get_mc_options(random_survival_policy);
+    options.step = _step_state_sqrt;
+    options.score_threshold = 20;
+    options.exploration = 50;
+    TreeNode *root = mc_init(state, deals, num_deals, options);
+    mc_iterate(state, root, 10000, options);
+    choice_set_t allowed = CHOICE_SET_ALL;
+    if (state_popcount(state) + 32 < TOTAL_SPACE) {
+        allowed = filter_chains(state, deals[0], 0);
+    }
+    content_t choice = mc_choose(root, allowed);
+    mc_free(root);
+    return choice;
 }

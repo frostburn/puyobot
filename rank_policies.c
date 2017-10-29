@@ -60,23 +60,43 @@ RankingOptions get_better_initial_state() {
     return options;
 }
 
+RankingOptions get_empty_initial_state() {
+    RankingOptions options = {0};
+    options.num_deals = 3;
+    options.min_chain = 1;
+    options.num_chains = 3;
+    return options;
+}
+
 int main() {
     jkiss_init();
     init_tetrominoes();
 
-    omp_set_num_threads(11);
-    RankingOptions options = get_better_initial_state();
-    print_state(&options.initial_state);
-    repr_state(&options.initial_state);
+    // omp_set_num_threads(11);
+    // RankingOptions options = get_better_initial_state();
+    // print_state(&options.initial_state);
+    // repr_state(&options.initial_state);
+
+    RankingOptions options = get_empty_initial_state();
     RankingResult result;
     printf("---Random but alive policy---\n");
-    result = iter_rank_policy(options, random_but_alive_policy, 100);
+    result = iter_rank_policy_parallel(options, random_but_alive_policy, 10000);
     print_ranking_result(result, 1);
+
+    printf("---Half deep 2---\n");
+    result = iter_rank_policy(options, half_deep_policy, 10);
+    print_ranking_result(result, 1);
+
     printf("---Group chain---\n");
     result = iter_rank_policy(options, group_chain_policy, 100);
     print_ranking_result(result, 1);
+
     printf("---Group chain sandwich---\n");
     result = iter_rank_policy(options, gcs_policy, 10);
+    print_ranking_result(result, 1);
+
+    printf("---Monte Carlo---\n");
+    result = iter_rank_policy_parallel(options, monte_carlo_policy, 64);
     print_ranking_result(result, 1);
 
     return 0;

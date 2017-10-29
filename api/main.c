@@ -7,6 +7,7 @@
 
 #include "jkiss/jkiss.h"
 
+#include "puyobot/solver/policy.h"
 #include "puyobot/solver/game_policy.h"
 #include "puyobot/template/pattern.h"
 

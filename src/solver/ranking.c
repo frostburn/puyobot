@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <omp.h>
+
 #include "puyobot/solver/ranking.h"
 
 void print_ranking_result(RankingResult result, int suppress_zero) {
@@ -125,5 +127,24 @@ RankingResult iter_rank_policy(RankingOptions options, policy_fun policy, size_t
             rank_policy(options, policy)
         );
     }
+    return result;
+}
+
+RankingResult iter_rank_policy_parallel(RankingOptions options, policy_fun policy, size_t iterations) {
+    RankingResult *results = malloc(iterations * sizeof(RankingResult));
+    #pragma omp parallel for
+    for (size_t i = 0; i < iterations; ++i) {
+        results[i].options = options;
+        results[i] = rank_policy(options, policy);
+    }
+    RankingResult result = {0};
+    result.options = options;
+    for (size_t i = 0; i < iterations; ++i) {
+        result = add_ranking_result(
+            result,
+            results[i]
+        );
+    }
+    free(results);
     return result;
 }

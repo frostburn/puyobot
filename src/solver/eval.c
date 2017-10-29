@@ -70,6 +70,51 @@ double eval_chains(void *_s) {
     return score;
 }
 
+double eval_pops(void *_s) {
+    State *s = _s;
+    int original_pc = state_popcount(s);
+    puyos_t all[2];
+    get_state_mask(s, all);
+    puyos_t accessible[2] = {LIFE_BLOCK & ~all[0], FULL & ~all[1]};
+    cross_2(accessible);
+    accessible[0] &= all[0];
+    accessible[1] &= all[1];
+    double score = 0;
+    State *c = malloc(sizeof(State));
+    for (int i = 0; i < NUM_COLORS - 1; ++i) {
+        for (int k = 0; k < NUM_FLOORS; ++k) {
+            for (int j = 0; j < WIDTH * HEIGHT; ++j) {
+                puyos_t p = 1ULL << j;
+                if (!(p & accessible[k])) {
+                    continue;
+                }
+                puyos_t source[2] = {0};
+                source[k] = p;
+                puyos_t target[2] = {
+                    s->floors[0][i] & LIFE_BLOCK,
+                    s->floors[1][i]
+                };
+                flood_2(source, target);
+                accessible[0] &= ~source[0];
+                accessible[1] &= ~source[1];
+
+                memcpy(c, s, sizeof(State));
+                c->floors[0][i] ^= source[0];
+                c->floors[1][i] ^= source[1];
+                int chain;
+                resolve(c, &chain);
+                if (chain) {
+                    double pc = state_popcount(c);
+                    double count = original_pc - popcount_2(source) - pc;
+                    score += chain * chain * chain / count;
+                }
+            }
+        }
+    }
+    free(c);
+    return score;
+}
+
 
 // Technically we would need a void match in the middle, but that's taken care of by the clears.
 #define SANDWICH_LEFT ((1ULL << 1) | (1ULL << V_SHIFT) | (1ULL << (1 + 2 * V_SHIFT)))

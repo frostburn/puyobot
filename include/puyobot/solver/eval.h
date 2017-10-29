@@ -9,6 +9,8 @@ double eval_groups(void *_s);
 
 double eval_chains(void *_s);
 
+double eval_pops(void *_s);
+
 double eval_sandwich(void *s);
 
 #endif

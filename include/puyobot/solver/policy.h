@@ -19,6 +19,8 @@ content_t random_survival_policy(void *s, content_t *deals, int  num_deals);
 
 content_t frog_policy(void *s, content_t *deals, int num_deals);
 
+content_t deep_policy(void *s, content_t *deals, int num_deals);
+
 content_t half_deep_policy(void *s, content_t *deals, int num_deals);
 
 content_t group_policy(void *s, content_t *deals, int  num_deals);
@@ -34,5 +36,7 @@ choice_set_t filter_chains(State *state, content_t deal, int max_chain);
 choice_set_t filter_landings(State *state);
 
 content_t template_policy(BottomTemplate *template, int depth, double factor, void *s, content_t *deals, int num_deals);
+
+content_t monte_carlo_policy(void *state, content_t *deals, int num_deals);
 
 #endif

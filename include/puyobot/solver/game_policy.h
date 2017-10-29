@@ -6,6 +6,8 @@
 
 typedef void (*multi_policy_fun)(void *s, content_t*);
 
+typedef content_t (*game_policy_fun)(Game *g, int player_index);
+
 content_t gcn_practice_policy(void *pg, content_t *deals, int num_deals);
 
 content_t gcn_game_policy(Game *g, int player_index);
