@@ -129,7 +129,7 @@ int main() {
     jkiss_init();
 
     State *state = calloc(1, sizeof(State));
-    policy_demo(state, 0, 1000, half_deep_policy);
+    policy_demo(state, 0, 1000, gcs_policy);
 
     return 0;
 }

@@ -12,6 +12,10 @@ content_t gcn_practice_policy(void *pg, content_t *deals, int num_deals);
 
 content_t gcn_game_policy(Game *g, int player_index);
 
+content_t simple_search_game_policy(Game *game, int player_index);
+
+content_t monte_carlo_game_policy(Game *game, int player_index);
+
 void multi_random_policy(void *g, content_t *choices);
 
 void multi_random_alive_policy(void *g, content_t *choices);

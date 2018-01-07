@@ -6,6 +6,7 @@
 #include "puyobot/solver/game_policy.h"
 #include "puyobot/solver/policy.h"
 #include "puyobot/solver/eval.h"
+#include "puyobot/solver/tree.h"
 
 double _eval_gcn_practice(void *_pg) {
     PracticeGame *pg = _pg;
@@ -41,6 +42,45 @@ content_t gcn_game_policy(Game *g, int player_index) {
         return CHOICE_PASS;
     }
     content_t choice = gcn_practice_policy(pg, pg->deals, pg->num_deals);
+    free(pg);
+    return choice;
+}
+
+content_t simple_search_game_policy(Game *game, int player_index) {
+    PracticeGame *pg = game_as_practice(game, player_index);
+    if (!pg) {
+        return CHOICE_PASS;
+    }
+    SearchOptions options = simple_search_options(eval_zero, 1, 1);
+    options.step = step_practice;
+    options.copy = copy_practice;
+    return rand_choice(solve(pg, pg->deals, pg->num_deals, options));
+}
+
+content_t monte_carlo_practice_policy(void *_pg, content_t *deals, int num_deals) {
+    PracticeGame *pg = _pg;
+    McOptions options = get_mc_options(random_policy);
+    options.step = step_practice;
+    options.copy = copy_practice;
+    options.score_threshold = 5;
+    options.exploration = 5;
+    TreeNode *root = mc_init(pg, deals, num_deals, options);
+    mc_iterate(pg, root, 2000, options);
+    choice_set_t allowed = CHOICE_SET_ALL;
+    if (state_popcount(&pg->player.state) + 32 < TOTAL_SPACE) {
+        allowed = filter_chains(&pg->player.state, deals[0], 0);
+    }
+    content_t choice = mc_choose(root, allowed);
+    mc_free(root);
+    return choice;
+}
+
+content_t monte_carlo_game_policy(Game *game, int player_index) {
+    PracticeGame *pg = game_as_practice(game, player_index);
+    if (!pg) {
+        return CHOICE_PASS;
+    }
+    content_t choice = monte_carlo_practice_policy(pg, pg->deals, pg->num_deals);
     free(pg);
     return choice;
 }
