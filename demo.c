@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#include <omp.h>
+
 #include "puyobot/animate.h"
 #include "puyobot/solver/policy.h"
 #include "puyobot/solver/tree.h"
@@ -20,7 +22,7 @@ void print_deals_on_the_side(content_t *deals, int num_deals) {
     printf("\x1b[0m\033[B\033[B\n");
 }
 
-void policy_demo(State *s, int do_animation, size_t iterations, policy_fun policy) {
+void policy_demo(State *s, int do_animation, size_t iterations, policy_fun policy, FILE *log_stream) {
     content_t deals[NUM_DEALS];
     int total_score = 0;
     double puyos_played = 0;
@@ -44,8 +46,21 @@ void policy_demo(State *s, int do_animation, size_t iterations, policy_fun polic
         deals[i] = rand_piece();
     }
 
+    if (log_stream) {
+        fprintf(log_stream, "[[\n");
+    }
     for (size_t i = 0; i < iterations; ++i) {
         content_t choice = policy(s, deals, NUM_DEALS);
+        if (log_stream) {
+            log_move(deals[0], choice, log_stream);
+            fprintf(log_stream, "]");
+            if (i == iterations - 1) {
+                fprintf(log_stream, "]");
+            } else {
+                fprintf(log_stream, ",[\n");
+            }
+            fflush(log_stream);
+        }
         if (!apply_deal_and_choice(s, deals[0], choice)) {
             game_overs++;
             clear_state(s);
@@ -91,7 +106,7 @@ void eval_demo(int do_animation, size_t iterations, eval_fun eval, int depth, fl
         return rand_choice(solve(s, deals, num_deals, options));
     }
     State *s = calloc(1, sizeof(State));
-    policy_demo(s, do_animation, iterations, policy);
+    policy_demo(s, do_animation, iterations, policy, NULL);
 }
 
 /*
@@ -125,11 +140,21 @@ size_t show_chain(int min_links, int use_extensions, int use_tailing) {
 }
 */
 
-int main() {
+int main(int argc, char *argv[]) {
     jkiss_init();
+    omp_set_num_threads(11);
+
+    FILE *log_file = NULL;
+    if (argc > 1) {
+        log_file = fopen(argv[1], "w");
+    }
 
     State *state = calloc(1, sizeof(State));
-    policy_demo(state, 0, 1000, gcs_policy);
+    policy_demo(state, 0, 5000, gcs_policy, log_file);
+
+    if (log_file) {
+        fclose(log_file);
+    }
 
     return 0;
 }

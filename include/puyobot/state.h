@@ -66,6 +66,8 @@ void just_apply_deal_and_choice(State *state, content_t deal, content_t choice);
 
 void clear_deal_and_choice(State *state);
 
+int log_move(content_t deal, content_t choice, FILE *stream);
+
 int step_state(void *s, content_t deal, content_t choice, double *score);
 
 SearchOptions simple_search_options(eval_fun eval, int depth, double tree_factor);

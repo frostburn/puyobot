@@ -426,6 +426,36 @@ void clear_deal_and_choice(State *state) {
     }
 }
 
+int log_move(content_t deal, content_t choice, FILE *stream) {
+    State *state = calloc(sizeof(State), 1);
+    just_apply_deal_and_choice(state, deal, choice);
+    puyos_t p = 1;
+    size_t total_written = 0;
+    for (int j = 0; j < 2 * WIDTH; ++j) {
+        int empty = 1;
+        for (int i = 0; i < NUM_COLORS; ++i) {
+            if (state->floors[0][i] & p) {
+                total_written += fprintf(stream, "%d", i + 1);
+                empty = 0;
+                break;
+            }
+        }
+        if (empty) {
+            fprintf(stream, "0");
+        }
+        if (j == WIDTH - 1) {
+            total_written += fprintf(stream, ",\n");
+        } else if (j == 2 * WIDTH - 1) {
+            total_written += fprintf(stream, "\n");
+        } else {
+            total_written += fprintf(stream, ", ");
+        }
+        p <<= 1;
+    }
+    free(state);
+    return total_written;
+}
+
 int step_state(void *s, content_t deal, content_t choice, double *score) {
     int valid = apply_deal_and_choice(s, deal, choice);
     if (!valid) {
